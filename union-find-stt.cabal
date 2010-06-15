@@ -1,0 +1,21 @@
+Name:            union-find
+Version:         0.1
+License:         BSD3
+License-File:    LICENSE
+Author:          Patrick Bahr <paba@diku.dk>
+Maintainer:      Patrick Bahr <paba@diku.dk>
+Synopsis:        Efficient union and equivalence testing of sets using STT.
+Description:	 
+Category:        Algorithms, Data
+Stability:       provisional
+Build-Type:      Simple
+Cabal-Version:   >= 1.6
+
+Library
+  Build-Depends:
+    base >= 4 && < 5, containers, STMonadTrans >= 0.2, mtl
+  Exposed-Modules:
+    Data.UnionFind.STT,
+    Data.UnionFind.Monad
+  Hs-Source-Dirs: src
+

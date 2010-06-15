@@ -1,0 +1,12 @@
+syntax:glob
+dist
+dummy.cabal
+*~
+*\#
+*.orig
+*.o
+*.hi
+.hpc
+hpcreport
+*.tix
+*.log
