@@ -29,7 +29,7 @@ module Data.UnionFind.STT
   ( emptyPartition
   , equate
   , equivalent
-  , equivalenceClass
+  , classDesc
   , Partition
   )
 where
@@ -40,26 +40,33 @@ import Control.Monad
 import Data.Map (Map)
 import qualified Data.Map as Map
 
-newtype Entry s a = Entry (STRef s (EntryData s a))
+newtype Entry s c a = Entry (STRef s (EntryData s c a))
     deriving (Eq)
 
-data EntryData s a = EntryData {
-      entryParent :: Maybe (Entry s a),
-      entryClass :: [a],
+data EntryData s c a = Node {
+      entryParent :: Entry s c a,
+      entryValue :: a
+    }
+                     | Root {
+      entryDesc :: c,
       entryWeight :: Int,
       entryValue :: a
     }
 
-data Partition s a = Partition {
-      entries :: STRef s (Map a (Entry s a))
+data Partition s c a = Partition {
+      entries :: STRef s (Map a (Entry s c a)),
+      singleDesc :: a -> c,
+      combDesc :: c -> c -> c
       }
 
 modifySTRef :: (Monad m) => STRef s a -> (a -> a) -> STT s m ()
 modifySTRef r f = readSTRef r >>= (writeSTRef r . f)
 
 
-emptyPartition :: Monad m => STT s m (Partition s a)
-emptyPartition = liftM Partition $ newSTRef Map.empty
+emptyPartition :: Monad m => (a -> c) -> (c -> c -> c) -> STT s m (Partition s c a)
+emptyPartition mk com = do 
+  es <- newSTRef Map.empty
+  return Partition {entries = es, singleDesc = mk, combDesc = com}
 
 
 -- | /O(1)/. @repr point@ returns the representative point of
@@ -67,23 +74,23 @@ emptyPartition = liftM Partition $ newSTRef Map.empty
 -- representative of its class.
 --
 -- This method performs the path compresssion.
-representative' :: Monad m => Entry s a -> STT s m (Maybe (Entry s a))
+representative' :: Monad m => Entry s c a -> STT s m (Maybe (Entry s c a))
 representative' (Entry e) = do
   ed <- readSTRef e
-  case entryParent ed of
-    Nothing -> return Nothing
-    Just parent -> do
+  case ed of
+    Root {} -> return Nothing
+    Node { entryParent = parent} -> do
       mparent' <- representative' parent
       case mparent' of
         Nothing -> return $ Just parent
-        Just parent' -> writeSTRef e ed{entryParent = Just parent'} >> return (Just parent')
+        Just parent' -> writeSTRef e ed{entryParent = parent'} >> return (Just parent')
 
 
 -- | /O(1)/. @repr point@ returns the representative point of
 -- @point@'s equivalence class.
 --
 -- This method performs the path compresssion.
-representative :: Monad m => Entry s a -> STT s m (Entry s a)
+representative :: Monad m => Entry s c a -> STT s m (Entry s c a)
 representative entry = do
   mrepr <- representative' entry
   case mrepr of
@@ -91,14 +98,13 @@ representative entry = do
     Just repr -> return repr
 
 
-getEntry' :: (Monad m, Ord a) => Partition s a -> a -> STT s m (Entry s a)
-getEntry' (Partition mref) val = do
+getEntry' :: (Monad m, Ord a) => Partition s c a -> a -> STT s m (Entry s c a)
+getEntry' Partition {entries = mref, singleDesc = mkDesc} val = do
   m <- readSTRef mref
   case Map.lookup val m of
     Nothing -> do
-      e <- newSTRef EntryData
-            { entryParent = Nothing,
-              entryClass = [val],
+      e <- newSTRef Root
+            { entryDesc = mkDesc val,
               entryWeight = 1,
               entryValue = val
             }
@@ -108,50 +114,49 @@ getEntry' (Partition mref) val = do
     Just entry -> return entry
 
 
-getEntry :: (Monad m, Ord a) => Partition s a -> a -> STT s m (Maybe (Entry s a))
-getEntry (Partition mref) val = do
+getEntry :: (Monad m, Ord a) => Partition s c a -> a -> STT s m (Maybe (Entry s c a))
+getEntry Partition { entries = mref} val = do
   m <- readSTRef mref
   case Map.lookup val m of
     Nothing -> return Nothing
     Just entry -> return $ Just entry
 
-equate :: (Monad m, Ord a) => Partition s a -> a -> a -> STT s m ()
+equate :: (Monad m, Ord a) => Partition s c a -> a -> a -> STT s m ()
 equate part x y = do
   ex <- getEntry' part x
   ey <- getEntry' part  y
-  equate' ex ey
+  equate' part ex ey
 
-equate' :: (Monad m, Ord a) => Entry s a -> Entry s a -> STT s m ()
-equate' x y = do
+equate' :: (Monad m, Ord a) => Partition s c a -> Entry s c a -> Entry s c a -> STT s m ()
+equate' Partition {combDesc = mkDesc} x y = do
   repx@(Entry rx) <- representative x
   repy@(Entry ry) <- representative y
   when (rx /= ry) $ do
-    dx@EntryData{entryWeight = wx, entryClass = chx} <- readSTRef rx
-    dy@EntryData{entryWeight = wy, entryClass = chy} <- readSTRef ry
+    dx@Root{entryWeight = wx, entryDesc = chx, entryValue = vx} <- readSTRef rx
+    dy@Root{entryWeight = wy, entryDesc = chy, entryValue = vy} <- readSTRef ry
     if  wx >= wy
       then do
-        writeSTRef ry dy{entryParent = Just repx}
-        writeSTRef rx dx{entryWeight = wx + wy, entryClass = chx ++ chy}
+        writeSTRef ry Node {entryParent = repx, entryValue = vy}
+        writeSTRef rx dx{entryWeight = wx + wy, entryDesc = mkDesc chx chy}
       else do
-       writeSTRef rx dx{entryParent = Just repy}
-       writeSTRef ry dy{entryWeight = wx + wy, entryClass = chx ++ chy}
+       writeSTRef rx Node {entryParent = repy, entryValue = vx}
+       writeSTRef ry dy{entryWeight = wx + wy, entryDesc = mkDesc chx chy}
 
-equivalenceClass :: (Monad m, Ord a) => Partition s a -> a -> STT s m [a]
-equivalenceClass p val = do
+classDesc :: (Monad m, Ord a) => Partition s c a -> a -> STT s m c
+classDesc p val = do
   mentry <- getEntry p val
   case mentry of
-    Nothing -> return [val]
-    Just entry -> equivalenceClass' entry
+    Nothing -> return $ singleDesc p val
+    Just entry -> classDesc' entry
 
-equivalenceClass' :: (Monad m) => Entry s a -> STT s m [a]
-equivalenceClass' entry = do
+classDesc' :: (Monad m) => Entry s c a -> STT s m c
+classDesc' entry = do
   Entry e <- representative entry
-  ed <- readSTRef e
-  return $ entryClass ed
+  liftM entryDesc $ readSTRef e
 
 -- | /O(1)/. Return @True@ if both points belong to the same
 -- | equivalence class.
-equivalent :: (Monad m, Ord a) => Partition s a -> a -> a -> STT s m Bool
+equivalent :: (Monad m, Ord a) => Partition s c a -> a -> a -> STT s m Bool
 equivalent p v1 v2 = do
   me1 <- getEntry p v1
   me2 <- getEntry p v2
@@ -161,6 +166,6 @@ equivalent p v1 v2 = do
     _ -> return False
     
 
-equivalent' :: (Monad m, Ord a) => Entry s a -> Entry s a -> STT s m Bool
+equivalent' :: (Monad m, Ord a) => Entry s c a -> Entry s c a -> STT s m Bool
 equivalent' e1 e2 = liftM2 (==) (representative e1) (representative e2)
 
