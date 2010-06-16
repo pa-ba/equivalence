@@ -1,15 +1,17 @@
--- | An implementation of Tarjan's UNION-FIND algorithm.  (Robert E
--- Tarjan. \"Efficiency of a Good But Not Linear Set Union Algorithm\", JACM
--- 22(2), 1975)
+--------------------------------------------------------------------------------
+-- |
+-- Module      : Data.Equivalence.STT
+-- Copyright   : 3gERP, 2010
+-- License     : All Rights Reserved
 --
--- The algorithm implements three operations efficiently (all amortised
--- @O(1)@):
+-- Maintainer  :  Patrick Bahr
+-- Stability   :  unknown
+-- Portability :  unknown
 --
---  1. Check whether two elements are in the same equivalence class.
---
---  2. Create a union of two equivalence classes.
---
---  3. Look up the descriptor of the equivalence class.
+-- This is an implementation of Tarjan's Union-Find algorithm (Robert
+-- E. Tarjan. "Efficiency of a Good But Not Linear Set Union
+-- Algorithm", JACM 22(2), 1975) in order to maintain an equivalence
+-- relation. 
 -- 
 -- The implementation is based on mutable references.  Each
 -- equivalence class has exactly one member that serves as its
@@ -25,14 +27,16 @@
 -- element.  Consequently future lookups will be have a path length of
 -- at most 1.
 --
-module Data.UnionFind.STT
-  ( emptyPartition
+--
+--------------------------------------------------------------------------------
+
+module Data.Equivalence.STT
+  ( leastEquiv
   , equate
   , equivalent
   , classDesc
-  , Partition
-  )
-where
+  , Equiv
+  ) where
 
 import Control.Monad.ST.Trans
 import Control.Monad
@@ -53,7 +57,7 @@ data EntryData s c a = Node {
       entryValue :: a
     }
 
-data Partition s c a = Partition {
+data Equiv s c a = Equiv {
       entries :: STRef s (Map a (Entry s c a)),
       singleDesc :: a -> c,
       combDesc :: c -> c -> c
@@ -63,10 +67,10 @@ modifySTRef :: (Monad m) => STRef s a -> (a -> a) -> STT s m ()
 modifySTRef r f = readSTRef r >>= (writeSTRef r . f)
 
 
-emptyPartition :: Monad m => (a -> c) -> (c -> c -> c) -> STT s m (Partition s c a)
-emptyPartition mk com = do 
+leastEquiv :: Monad m => (a -> c) -> (c -> c -> c) -> STT s m (Equiv s c a)
+leastEquiv mk com = do 
   es <- newSTRef Map.empty
-  return Partition {entries = es, singleDesc = mk, combDesc = com}
+  return Equiv {entries = es, singleDesc = mk, combDesc = com}
 
 
 -- | /O(1)/. @repr point@ returns the representative point of
@@ -98,8 +102,8 @@ representative entry = do
     Just repr -> return repr
 
 
-getEntry' :: (Monad m, Ord a) => Partition s c a -> a -> STT s m (Entry s c a)
-getEntry' Partition {entries = mref, singleDesc = mkDesc} val = do
+getEntry' :: (Monad m, Ord a) => Equiv s c a -> a -> STT s m (Entry s c a)
+getEntry' Equiv {entries = mref, singleDesc = mkDesc} val = do
   m <- readSTRef mref
   case Map.lookup val m of
     Nothing -> do
@@ -114,21 +118,21 @@ getEntry' Partition {entries = mref, singleDesc = mkDesc} val = do
     Just entry -> return entry
 
 
-getEntry :: (Monad m, Ord a) => Partition s c a -> a -> STT s m (Maybe (Entry s c a))
-getEntry Partition { entries = mref} val = do
+getEntry :: (Monad m, Ord a) => Equiv s c a -> a -> STT s m (Maybe (Entry s c a))
+getEntry Equiv { entries = mref} val = do
   m <- readSTRef mref
   case Map.lookup val m of
     Nothing -> return Nothing
     Just entry -> return $ Just entry
 
-equate :: (Monad m, Ord a) => Partition s c a -> a -> a -> STT s m ()
-equate part x y = do
-  ex <- getEntry' part x
-  ey <- getEntry' part  y
-  equate' part ex ey
+equate :: (Monad m, Ord a) => Equiv s c a -> a -> a -> STT s m ()
+equate equiv x y = do
+  ex <- getEntry' equiv x
+  ey <- getEntry' equiv  y
+  equate' equiv ex ey
 
-equate' :: (Monad m, Ord a) => Partition s c a -> Entry s c a -> Entry s c a -> STT s m ()
-equate' Partition {combDesc = mkDesc} x y = do
+equate' :: (Monad m, Ord a) => Equiv s c a -> Entry s c a -> Entry s c a -> STT s m ()
+equate' Equiv {combDesc = mkDesc} x y = do
   repx@(Entry rx) <- representative x
   repy@(Entry ry) <- representative y
   when (rx /= ry) $ do
@@ -142,11 +146,11 @@ equate' Partition {combDesc = mkDesc} x y = do
        writeSTRef rx Node {entryParent = repy, entryValue = vx}
        writeSTRef ry dy{entryWeight = wx + wy, entryDesc = mkDesc chx chy}
 
-classDesc :: (Monad m, Ord a) => Partition s c a -> a -> STT s m c
-classDesc p val = do
-  mentry <- getEntry p val
+classDesc :: (Monad m, Ord a) => Equiv s c a -> a -> STT s m c
+classDesc eq val = do
+  mentry <- getEntry eq val
   case mentry of
-    Nothing -> return $ singleDesc p val
+    Nothing -> return $ singleDesc eq val
     Just entry -> classDesc' entry
 
 classDesc' :: (Monad m) => Entry s c a -> STT s m c
@@ -156,10 +160,10 @@ classDesc' entry = do
 
 -- | /O(1)/. Return @True@ if both points belong to the same
 -- | equivalence class.
-equivalent :: (Monad m, Ord a) => Partition s c a -> a -> a -> STT s m Bool
-equivalent p v1 v2 = do
-  me1 <- getEntry p v1
-  me2 <- getEntry p v2
+equivalent :: (Monad m, Ord a) => Equiv s c a -> a -> a -> STT s m Bool
+equivalent eq v1 v2 = do
+  me1 <- getEntry eq v1
+  me2 <- getEntry eq v2
   case (me1,me2) of
     (Just e1, Just e2) -> equivalent' e1 e2
     (Nothing, Nothing) -> return $ v1 == v2

@@ -3,6 +3,7 @@ dist
 dummy.cabal
 *~
 *\#
+.\#*
 *.orig
 *.o
 *.hi

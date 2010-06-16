@@ -1,10 +1,10 @@
-Name:            union-find
+Name:            equivalence
 Version:         0.1
 License:         BSD3
 License-File:    LICENSE
 Author:          Patrick Bahr <paba@diku.dk>
 Maintainer:      Patrick Bahr <paba@diku.dk>
-Synopsis:        Efficient union and equivalence testing of sets using STT.
+Synopsis:        Maintaining an equivalence relation implemented as union-find using STT.
 Description:	 
 Category:        Algorithms, Data
 Stability:       provisional
@@ -15,7 +15,7 @@ Library
   Build-Depends:
     base >= 4 && < 5, containers, STMonadTrans >= 0.2, mtl
   Exposed-Modules:
-    Data.UnionFind.STT,
-    Data.UnionFind.Monad
+    Data.Equivalence.STT,
+    Data.Equivalence.Monad
   Hs-Source-Dirs: src
 
