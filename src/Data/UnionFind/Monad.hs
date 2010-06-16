@@ -1,12 +1,18 @@
 {-# LANGUAGE
   RankNTypes,
   FlexibleInstances,
+  FlexibleContexts,
   MultiParamTypeClasses,
-  UndecidableInstances #-}
+  UndecidableInstances,
+  FunctionalDependencies #-}
 
 
 module Data.UnionFind.Monad
-where
+    (
+     MonadPartition(..),
+     PartitionT,
+     runPartitionT
+     ) where
 
 import Data.UnionFind.STT hiding (equate, equivalent, equivalenceClass)
 import qualified Data.UnionFind.STT  as S
@@ -17,9 +23,13 @@ import Control.Monad.Reader
 import Control.Monad.Error
 import Control.Monad.State
 import Control.Monad.Trans
+import Control.Monad.Identity
 import Control.Monad.ST.Trans
 
+
+
 newtype PartitionT s v m a = PartitionT {unPartitionT :: ReaderT (Partition s v) (STT s m) a}
+type PartitionM s v = PartitionT s v Identity
 
 instance (Monad m) => Monad (PartitionT s v m) where
     PartitionT m >>= f = PartitionT (m >>= (unPartitionT . f))
@@ -51,17 +61,26 @@ runPartitionT m = runST $ do
   p <- emptyPartition
   (`runReaderT` p) $ unPartitionT m
 
-equivalent :: (Monad m, Ord v) => v -> v -> PartitionT s v m Bool
-equivalent x y = PartitionT $ do
-  part <- ask
-  lift $ S.equivalent part x y
 
-equivalenceClass :: (Monad m, Ord v) => v -> PartitionT s v m [v]
-equivalenceClass x = PartitionT $ do
-  part <- ask
-  lift $ S.equivalenceClass part x
+class (Monad m, Ord v) => MonadPartition v m | m -> v where
+    equivalent :: v -> v -> m Bool
+    equivalenceClass :: v -> m [v]
+    equate :: v -> v -> m ()
 
-equate :: (Monad m, Ord v) => v -> v -> PartitionT s v m ()
-equate x y = PartitionT $ do
-  part <- ask
-  lift $ S.equate part x y
+instance (Monad m, Ord v) => MonadPartition v (PartitionT s v m) where
+    equivalent x y = PartitionT $ do
+      part <- ask
+      lift $ S.equivalent part x y
+
+    equivalenceClass x = PartitionT $ do
+      part <- ask
+      lift $ S.equivalenceClass part x
+           
+    equate x y = PartitionT $ do
+      part <- ask
+      lift $ S.equate part x y
+
+instance (MonadPartition v m, MonadTrans t, Monad (t m)) => MonadPartition v (t m) where
+    equivalent x y = lift $ equivalent x y
+    equivalenceClass = lift . equivalenceClass
+    equate x y = lift $ equate x y
