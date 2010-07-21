@@ -13,7 +13,7 @@ Cabal-Version:   >= 1.6
 
 Library
   Build-Depends:
-    base >= 4 && < 5, containers, STMonadTrans >= 0.2, mtl
+    base >= 4 && < 5, containers, mtl, STMonadTrans
   Exposed-Modules:
     Data.Equivalence.STT,
     Data.Equivalence.Monad
