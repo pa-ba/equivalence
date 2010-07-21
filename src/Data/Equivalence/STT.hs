@@ -106,11 +106,9 @@ maintaining an equivalence relation. That is it represents, the fines
 descriptors. -}
 
 leastEquiv :: Monad m
-          -- | used to construct an equivalence class descriptor for a singleton class
-           => (a -> c)
-          -- | used to combine the equivalence class descriptor of two classes
-          --   which are meant to be combined.
-           -> (c -> c -> c)
+           => (a -> c) -- ^ used to construct an equivalence class descriptor for a singleton class
+           -> (c -> c -> c) -- ^ used to combine the equivalence class descriptor of two classes
+                            --   which are meant to be combined.
            -> STT s m (Equiv s c a)
 leastEquiv mk com = do 
   es <- newSTRef Map.empty

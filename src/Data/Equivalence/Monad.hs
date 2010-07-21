@@ -91,11 +91,9 @@ an equivalence class descriptor for a singleton class and how to
 combine two equivalence class descriptors. -}
 
 runEquivT :: (Monad m)
-          -- | used to construct an equivalence class descriptor for a singleton class
-          => (v -> c)
-          -- | used to combine the equivalence class descriptor of two classes
-          --   which are meant to be combined.
-          -> (c -> c -> c)
+          => (v -> c) -- ^ used to construct an equivalence class descriptor for a singleton class
+          -> (c -> c -> c) -- ^ used to combine the equivalence class descriptor of two classes
+                           --   which are meant to be combined.
           -> (forall s. EquivT s c v m a)
           -> m a
 runEquivT mk com m = runST $ do
@@ -106,12 +104,9 @@ runEquivT mk com m = runST $ do
 equivalence relation. The first tow arguments specify how to construct
 an equivalence class descriptor for a singleton class and how to
 combine two equivalence class descriptors. -}
-runEquivM ::
-          -- | used to construct an equivalence class descriptor for a singleton class
-             (v -> c)
-          -- | used to combine the equivalence class descriptor of two classes
-          --   which are meant to be combined.
-          -> (c -> c -> c)
+runEquivM :: (v -> c) -- ^ used to construct an equivalence class descriptor for a singleton class
+          -> (c -> c -> c) -- ^ used to combine the equivalence class descriptor of two classes
+                           --   which are meant to be combined.
           -> (forall s. EquivM s c v a)
           -> a
 runEquivM sing comb m = runIdentity $ runEquivT sing comb m
