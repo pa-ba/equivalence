@@ -31,8 +31,8 @@ module Data.Equivalence.Monad
      runEquivM
      ) where
 
-import Data.Equivalence.STT hiding (equate, equivalent, classDesc, removeClass,
-                                    getClass , combine, same , desc , remove )
+import Data.Equivalence.STT hiding (equate, equateAll, equivalent, classDesc, removeClass,
+                                    getClass , combine, combineAll, same , desc , remove )
 import qualified Data.Equivalence.STT  as S
 
  
@@ -125,10 +125,17 @@ class (Monad m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m -> d where
 
     classDesc :: v -> m d
     
+    {-| This function equates the element in the given list. That is, it
+      unions the equivalence classes of the elements and combines their
+      descriptor. -}
+
+    equateAll :: [v] -> m ()
+    
     {-| This function equates the given two elements. That is it
         unions the equivalence classes of the two elements. -}
 
     equate :: v -> v -> m ()
+    equate x y = equateAll [x,y]
 
     {-| This function removes the equivalence class of the given
       element. If there is no corresponding equivalence class, @False@ is
@@ -140,13 +147,22 @@ class (Monad m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m -> d where
       is contained in. -}
 
     getClass :: v -> m c
-                                                                 
+                
+    
+    {-| This function combines all equivalence classes in the given
+      list. Afterwards all elements in the argument list represent the same
+      equivalence class! -}
+
+    combineAll :: [c] -> m ()
+
+    
     {-| This function combines the two given equivalence
       classes. Afterwards both arguments represent the same equivalence
       class! One of it is returned in order to represent the new combined
       equivalence class. -}
 
     combine :: c -> c -> m c
+    combine x y = combineAll [x,y] >> return x
                
     {-| This function decides whether the two given equivalence classes
       are the same. -}
@@ -165,6 +181,9 @@ class (Monad m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m -> d where
 
     remove :: c -> m Bool
 
+
+                                     
+
 instance (Monad m, Ord v) => MonadEquiv (Class s d v) v d (EquivT s d v m) where
     equivalent x y = EquivT $ do
       part <- ask
@@ -173,6 +192,10 @@ instance (Monad m, Ord v) => MonadEquiv (Class s d v) v d (EquivT s d v m) where
     classDesc x = EquivT $ do
       part <- ask
       lift $ S.classDesc part x
+           
+    equateAll x = EquivT $ do
+      part <- ask
+      lift $ S.equateAll part x
            
     equate x y = EquivT $ do
       part <- ask
@@ -185,6 +208,10 @@ instance (Monad m, Ord v) => MonadEquiv (Class s d v) v d (EquivT s d v m) where
     getClass x = EquivT $ do
       part <- ask
       lift $ S.getClass part x
+
+    combineAll x = EquivT $ do
+      part <- ask
+      lift $ S.combineAll part x
 
     combine x y = EquivT $ do
       part <- ask
@@ -205,9 +232,11 @@ instance (Monad m, Ord v) => MonadEquiv (Class s d v) v d (EquivT s d v m) where
 instance (MonadEquiv c v d m, Monoid w) => MonadEquiv c v d (WriterT w m) where
     equivalent x y = lift $ equivalent x y
     classDesc = lift . classDesc
+    equateAll x = lift $ equateAll x
     equate x y = lift $ equate x y
     removeClass x = lift $ removeClass x
     getClass x = lift $ getClass x
+    combineAll x = lift $ combineAll x
     combine x y = lift $ combine x y
     x === y = lift $ (===) x y
     desc x = lift $ desc x
@@ -216,9 +245,11 @@ instance (MonadEquiv c v d m, Monoid w) => MonadEquiv c v d (WriterT w m) where
 instance (MonadEquiv c v d m, Error e) => MonadEquiv c v d (ErrorT e m) where
     equivalent x y = lift $ equivalent x y
     classDesc = lift . classDesc
+    equateAll x = lift $ equateAll x
     equate x y = lift $ equate x y
     removeClass x = lift $ removeClass x
     getClass x = lift $ getClass x
+    combineAll x = lift $ combineAll x
     combine x y = lift $ combine x y
     x === y = lift $ (===) x y
     desc x = lift $ desc x
@@ -227,9 +258,11 @@ instance (MonadEquiv c v d m, Error e) => MonadEquiv c v d (ErrorT e m) where
 instance (MonadEquiv c v d m) => MonadEquiv c v d (StateT s m) where
     equivalent x y = lift $ equivalent x y
     classDesc = lift . classDesc
+    equateAll x = lift $ equateAll x
     equate x y = lift $ equate x y
     removeClass x = lift $ removeClass x
     getClass x = lift $ getClass x
+    combineAll x = lift $ combineAll x
     combine x y = lift $ combine x y
     x === y = lift $ (===) x y
     desc x = lift $ desc x
@@ -238,9 +271,11 @@ instance (MonadEquiv c v d m) => MonadEquiv c v d (StateT s m) where
 instance (MonadEquiv c v d m) => MonadEquiv c v d (ReaderT r m) where
     equivalent x y = lift $ equivalent x y
     classDesc = lift . classDesc
+    equateAll x = lift $ equateAll x
     equate x y = lift $ equate x y
     removeClass x = lift $ removeClass x
     getClass x = lift $ getClass x
+    combineAll x = lift $ combineAll x
     combine x y = lift $ combine x y
     x === y = lift $ (===) x y
     desc x = lift $ desc x

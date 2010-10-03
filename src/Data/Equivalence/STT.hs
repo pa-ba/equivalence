@@ -47,11 +47,13 @@ module Data.Equivalence.STT
   -- * Operations on Equivalence Classes
   , getClass
   , combine
+  , combineAll
   , same
   , desc
   , remove
   -- * Operations on Elements
   , equate
+  , equateAll
   , equivalent
   , classDesc
   , removeClass
@@ -246,6 +248,22 @@ equateEntry Equiv {combDesc = mkDesc} repx@(Entry rx) repy@(Entry ry) =
        writeSTRef rx Node {entryParent = repy, entryValue = vx}
        writeSTRef ry dy{entryWeight = wx + wy, entryDesc = mkDesc chx chy}
 
+{-| This function equates all elements given in the list by pairwise
+applying 'equateEntry'. -}
+
+equateEntries :: (Monad m, Ord a) => Equiv s c a -> [Entry s c a] -> STT s m ()
+equateEntries eq es = run es
+    where run (e:r@(f:_)) = equateEntry eq e f >> run r
+          run _ = return ()
+
+
+
+{-| This function combines all equivalence classes in the given
+list. Afterwards all elements in the argument list represent the same
+equivalence class! -}
+
+combineAll :: (Monad m, Ord a) => Equiv s c a -> [Class s c a] -> STT s m ()
+combineAll eq cs = mapM (classRep eq) cs >>= equateEntries eq
 
 
 {-| This function combines the two given equivalence
@@ -254,21 +272,22 @@ class! One of it is returned in order to represent the new combined
 equivalence class. -}
 
 combine :: (Monad m, Ord a) => Equiv s c a -> Class s c a -> Class s c a -> STT s m (Class s c a)
-combine eq x y = do
-  rx <- classRep eq x
-  ry <- classRep eq y
-  equateEntry eq rx ry
-  return x
+combine eq x y = combineAll eq [x,y] >> return x
+
+
+{-| This function equates the element in the given list. That is, it
+unions the equivalence classes of the elements and combines their
+descriptor. -}
+
+equateAll :: (Monad m, Ord a) => Equiv s c a -> [a] -> STT s m ()
+equateAll eq els = mapM (representative eq) els >>= equateEntries eq
 
 {-| This function equates the two given elements. That is, it unions
 the equivalence classes of the two elements and combines their
 descriptor. -}
 
 equate :: (Monad m, Ord a) => Equiv s c a -> a -> a -> STT s m ()
-equate eq x y = do
-  rx <- representative eq x
-  ry <- representative eq y
-  equateEntry eq rx ry
+equate eq x y = equateAll eq [x,y]
 
 
 {-| This function returns the descriptor of the given
