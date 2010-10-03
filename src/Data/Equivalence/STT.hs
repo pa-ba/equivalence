@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 --------------------------------------------------------------------------------
 -- |
 -- Module      : Data.Equivalence.STT
@@ -37,18 +39,34 @@
 --------------------------------------------------------------------------------
 
 module Data.Equivalence.STT
-  ( leastEquiv
+  ( 
+   -- * Equivalence Relation
+    Equiv
+  , Class
+  , leastEquiv
+  -- * Operations on Equivalence Classes
+  , getClass
+  , combine
+  , same
+  , desc
+  , remove
+  -- * Operations on Elements
   , equate
   , equivalent
   , classDesc
-  , Equiv
+  , removeClass
   ) where
 
 import Control.Monad.ST.Trans
 import Control.Monad
 
+import Data.Maybe
+
 import Data.Map (Map)
 import qualified Data.Map as Map
+
+newtype Class s c a = Class (Entry s c a)
+
 
 {-| This type represents a reference to an entry in the tree data
 structure. An entry of type 'Entry' @s c a@ lives in the state space
@@ -56,7 +74,6 @@ indexed by @s@, contains equivalence class descriptors of type @c@ and
 has elements of type @a@.-}
 
 newtype Entry s c a = Entry (STRef s (EntryData s c a))
-    deriving (Eq)
 
 {-| This type represents entries (nodes) in the tree data
 structure. Entry data of type 'EntryData' @s c a@ lives in the state space
@@ -70,8 +87,11 @@ data EntryData s c a = Node {
                      | Root {
       entryDesc :: c,
       entryWeight :: Int,
-      entryValue :: a
+      entryValue :: a,
+      entryDeleted :: Bool
     }
+
+type Entries s c a = STRef s (Map a (Entry s c a))
 
 {-| This is the top-level data structure that represents an
 equivalence relation. An equivalence relation of type 'Equiv' @s c a@
@@ -80,24 +100,13 @@ descriptors of type @c@ and has elements of type @a@. -}
 
 data Equiv s c a = Equiv {
       -- | maps elements to their entry in the tree data structure
-      entries :: STRef s (Map a (Entry s c a)), 
+      entries :: Entries s c a, 
       -- | constructs an equivalence class descriptor for a singleton class
       singleDesc :: a -> c,
       -- | combines the equivalence class descriptor of two classes
       --   which are meant to be combined.
       combDesc :: c -> c -> c
       }
-{-
-   not used
-
-{-|
-  This function modifies the content of a reference cell.
--}
-
-modifySTRef :: (Monad m) => STRef s a -> (a -> a) -> STT s m ()
-modifySTRef r f = readSTRef r >>= (writeSTRef r . f)
-
--}
 
 {-| This function constructs the initial data structure for
 maintaining an equivalence relation. That is it represents, the fines
@@ -122,50 +131,89 @@ the representative itself.
 
 This function performs path compression.  -}
 
-representative' :: Monad m => Entry s c a -> STT s m (Maybe (Entry s c a))
+representative' :: Monad m => Entry s c a -> STT s m (Maybe (Entry s c a),Bool)
 representative' (Entry e) = do
   ed <- readSTRef e
   case ed of
-    Root {} -> return Nothing
-    Node { entryParent = parent} -> do
-      mparent' <- representative' parent
+    Root {entryDeleted = del} -> do
+      return (Nothing, del)
+    Node {entryParent = parent} -> do
+      (mparent',del) <- representative' parent
       case mparent' of
-        Nothing -> return $ Just parent
-        Just parent' -> writeSTRef e ed{entryParent = parent'} >> return (Just parent')
-
-
+        Nothing -> return $ (Just parent, del)
+        Just parent' -> writeSTRef e ed{entryParent = parent'} >> return (Just parent', del)
 
 
 {-| This function returns the representative entry of the argument's
 equivalence class (i.e. the root of its tree).
 
 This function performs path compression.  -}
-representative :: Monad m => Entry s c a -> STT s m (Entry s c a)
-representative entry = do
-  mrepr <- representative' entry
-  case mrepr of
-    Nothing -> return entry
-    Just repr -> return repr
 
+representative :: (Monad m, Ord a) => Equiv s c a -> a -> STT s m (Entry s c a)
+representative eq v = do
+  mentry <- getEntry eq v
+  case mentry of -- check whether there is an entry
+    Nothing -> mkEntry eq v -- if not, create a new one
+    Just entry -> do
+      (mrepr,del) <- representative' entry
+      if del -- check whether equivalence class was deleted
+        then mkEntry eq v -- if so, create a new entry
+        else case mrepr of
+               Nothing -> return entry
+               Just repr -> return repr
 
-{-| This function looks up the entry of the given element in the given
-equivalence relation representation. If there is none yet, then a
-fresh one is constructed which then represents a new singleton
-equivalence class! -}
+{-| This function provides the representative entry of the given
+equivalence class. This function performs path compression. -}
+
+classRep :: (Monad m, Ord a) => Equiv s c a -> Class s c a -> STT s m (Entry s c a)
+classRep eq (Class entry) = do
+  (mrepr,del) <- representative' entry
+  if del -- check whether equivalence class was deleted
+    then mkEntry' eq entry -- if so, create a new entry
+    else case mrepr of
+           Nothing -> return entry
+           Just repr -> return repr
+  
+
+{-| This function constructs a new (root) entry containing the given
+entry's value, inserts it into the lookup table (thereby removing any
+existing entry). -}
+
+mkEntry' :: (Monad m, Ord a)
+        => Equiv s c a -> Entry s c a
+        -> STT s m (Entry s c a)  -- ^ the constructed entry
+mkEntry' eq (Entry e) = readSTRef e >>= mkEntry eq . entryValue
+
+{-| This function constructs a new (root) entry containing the given
+value, inserts it into the lookup table (thereby removing any existing
+entry). -}
+
+mkEntry :: (Monad m, Ord a)
+        => Equiv s c a -> a
+        -> STT s m (Entry s c a)  -- ^ the constructed entry
+mkEntry Equiv {entries = mref, singleDesc = mkDesc} val = do
+  e <- newSTRef Root
+       { entryDesc = mkDesc val,
+         entryWeight = 1,
+         entryValue = val,
+         entryDeleted = False
+       }
+  let entry = Entry e
+  m <- readSTRef mref
+  writeSTRef mref (Map.insert val entry m)
+  return entry
+
+{-| This function provides the equivalence class the given element is
+contained in. -}
+
+getClass :: (Monad m, Ord a) => Equiv s c a -> a -> STT s m (Class s c a)
+getClass eq v = liftM Class (getEntry' eq v)
 
 getEntry' :: (Monad m, Ord a) => Equiv s c a -> a -> STT s m (Entry s c a)
-getEntry' Equiv {entries = mref, singleDesc = mkDesc} val = do
-  m <- readSTRef mref
-  case Map.lookup val m of
-    Nothing -> do
-      e <- newSTRef Root
-            { entryDesc = mkDesc val,
-              entryWeight = 1,
-              entryValue = val
-            }
-      let entry = Entry e
-      writeSTRef mref (Map.insert val entry m)
-      return entry
+getEntry' eq v = do
+  mentry <- getEntry eq v
+  case mentry of
+    Nothing -> mkEntry eq v
     Just entry -> return entry
 
 {-| This function looks up the entry of the given element in the given
@@ -179,24 +227,14 @@ getEntry Equiv { entries = mref} val = do
     Nothing -> return Nothing
     Just entry -> return $ Just entry
 
+
+
 {-| This function equates the two given elements. That is, it unions
 the equivalence classes of the two elements and combines their
 descriptor. -}
 
-equate :: (Monad m, Ord a) => Equiv s c a -> a -> a -> STT s m ()
-equate equiv x y = do
-  ex <- getEntry' equiv x
-  ey <- getEntry' equiv  y
-  equate' equiv ex ey
-
-
-{-| This function equates the two given entries. That is, it performs
-a weighted union of their trees combines their descriptor. -}
-
-equate' :: (Monad m, Ord a) => Equiv s c a -> Entry s c a -> Entry s c a -> STT s m ()
-equate' Equiv {combDesc = mkDesc} x y = do
-  repx@(Entry rx) <- representative x
-  repy@(Entry ry) <- representative y
+equateEntry :: (Monad m, Ord a) => Equiv s c a -> Entry s c a -> Entry s c a -> STT s m ()
+equateEntry Equiv {combDesc = mkDesc} repx@(Entry rx) repy@(Entry ry) = 
   when (rx /= ry) $ do
     dx@Root{entryWeight = wx, entryDesc = chx, entryValue = vx} <- readSTRef rx
     dy@Root{entryWeight = wy, entryDesc = chy, entryValue = vy} <- readSTRef ry
@@ -208,22 +246,56 @@ equate' Equiv {combDesc = mkDesc} x y = do
        writeSTRef rx Node {entryParent = repy, entryValue = vx}
        writeSTRef ry dy{entryWeight = wx + wy, entryDesc = mkDesc chx chy}
 
+
+
+{-| This function combines the two given equivalence
+classes. Afterwards both arguments represent the same equivalence
+class! One of it is returned in order to represent the new combined
+equivalence class. -}
+
+combine :: (Monad m, Ord a) => Equiv s c a -> Class s c a -> Class s c a -> STT s m (Class s c a)
+combine eq x y = do
+  rx <- classRep eq x
+  ry <- classRep eq y
+  equateEntry eq rx ry
+  return x
+
+{-| This function equates the two given elements. That is, it unions
+the equivalence classes of the two elements and combines their
+descriptor. -}
+
+equate :: (Monad m, Ord a) => Equiv s c a -> a -> a -> STT s m ()
+equate eq x y = do
+  rx <- representative eq x
+  ry <- representative eq y
+  equateEntry eq rx ry
+
+
+{-| This function returns the descriptor of the given
+equivalence class. -}
+
+desc :: (Monad m, Ord a) => Equiv s c a -> Class s c a -> STT s m c
+desc eq cl = do
+  Entry e <- classRep eq cl
+  liftM entryDesc $ readSTRef e
+
 {-| This function returns the descriptor of the given element's
 equivalence class. -}
 
 classDesc :: (Monad m, Ord a) => Equiv s c a -> a -> STT s m c
 classDesc eq val = do
-  mentry <- getEntry eq val
-  case mentry of
-    Nothing -> return $ singleDesc eq val
-    Just entry -> classDesc' entry
-
-{-| This function returns the descriptor of the given entry's tree. -}
-
-classDesc' :: (Monad m) => Entry s c a -> STT s m c
-classDesc' entry = do
-  Entry e <- representative entry
+  Entry e <- representative eq val
   liftM entryDesc $ readSTRef e
+
+
+{-| This function decides whether the two given equivalence classes
+are the same. -}
+
+same :: (Monad m, Ord a) => Equiv s c a -> Class s c a -> Class s c a -> STT s m Bool
+same eq c1 c2 = do
+  (Entry r1) <- classRep eq c1
+  (Entry r2) <- classRep eq c2
+  return (r1 == r2)
 
 {-| This function decides whether the two given elements are in the
 same equivalence class according to the given equivalence relation
@@ -231,16 +303,51 @@ representation. -}
 
 equivalent :: (Monad m, Ord a) => Equiv s c a -> a -> a -> STT s m Bool
 equivalent eq v1 v2 = do
-  me1 <- getEntry eq v1
-  me2 <- getEntry eq v2
-  case (me1,me2) of
-    (Just e1, Just e2) -> equivalent' e1 e2
-    (Nothing, Nothing) -> return $ v1 == v2
-    _ -> return False
-    
-{-| This function decides whether the two given entries are in the
-same tree (by comparing their roots).-}
+  (Entry r1) <- representative eq v1
+  (Entry r2) <- representative eq v2
+  return (r1 == r2)
 
-equivalent' :: (Monad m, Ord a) => Entry s c a -> Entry s c a -> STT s m Bool
-equivalent' e1 e2 = liftM2 (==) (representative e1) (representative e2)
 
+
+{-|
+  This function modifies the content of a reference cell.
+ -}
+
+modifySTRef :: (Monad m) => STRef s a -> (a -> a) -> STT s m ()
+modifySTRef r f = readSTRef r >>= (writeSTRef r . f)
+
+
+{-| This function marks the given root entry as deleted.  -}
+
+removeEntry :: (Monad m, Ord a) => Entry s c a -> STT s m ()
+removeEntry (Entry r) = modifySTRef r change
+    where change e = e {entryDeleted = True}
+
+
+{-| This function removes the given equivalence class. If the
+equivalence class does not exists anymore @False@ is returned;
+otherwise @True@. -}
+
+remove :: (Monad m, Ord a) => Equiv s c a -> Class s c a -> STT s m Bool
+remove _ (Class entry) = do
+  (mentry, del) <- representative' entry
+  if del 
+    then return False
+    else removeEntry (fromMaybe entry mentry)
+         >> return True
+
+{-| This function removes the equivalence class of the given
+element. If there is no corresponding equivalence class, @False@ is
+returned; otherwise @True@. -}
+
+removeClass :: (Monad m, Ord a) => Equiv s c a -> a -> STT s m Bool
+removeClass eq v = do
+  mentry <- getEntry eq v
+  case mentry of
+    Nothing -> return False
+    Just entry -> do
+      (mentry, del) <- representative' entry
+      if del 
+        then return False
+        else removeEntry (fromMaybe entry mentry)
+             >> return True

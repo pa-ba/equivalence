@@ -31,7 +31,8 @@ module Data.Equivalence.Monad
      runEquivM
      ) where
 
-import Data.Equivalence.STT hiding (equate, equivalent, classDesc)
+import Data.Equivalence.STT hiding (equate, equivalent, classDesc, removeClass,
+                                    getClass , combine, same , desc , remove )
 import qualified Data.Equivalence.STT  as S
 
  
@@ -114,7 +115,7 @@ runEquivM sing comb m = runIdentity $ runEquivT sing comb m
 {-| This class specifies the interface for a monadic computation that
 maintains an equivalence relation.  -}
 
-class (Monad m, Ord v) => MonadEquiv c v m | m -> v, m -> c where
+class (Monad m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m -> d where
     {-| This function decides whether the two given elements are
         equivalent in the current equivalence relation -}
 
@@ -122,14 +123,49 @@ class (Monad m, Ord v) => MonadEquiv c v m | m -> v, m -> c where
     {-| This function obtains the descriptor of the given element's
         equivalence class. -}
 
-    classDesc :: v -> m c
+    classDesc :: v -> m d
     
     {-| This function equates the given two elements. That is it
         unions the equivalence classes of the two elements. -}
 
     equate :: v -> v -> m ()
 
-instance (Monad m, Ord v) => MonadEquiv c v (EquivT s c v m) where
+    {-| This function removes the equivalence class of the given
+      element. If there is no corresponding equivalence class, @False@ is
+      returned; otherwise @True@. -}
+    removeClass :: v -> m Bool
+
+                   
+    {-| This function provides the equivalence class the given element
+      is contained in. -}
+
+    getClass :: v -> m c
+                                                                 
+    {-| This function combines the two given equivalence
+      classes. Afterwards both arguments represent the same equivalence
+      class! One of it is returned in order to represent the new combined
+      equivalence class. -}
+
+    combine :: c -> c -> m c
+               
+    {-| This function decides whether the two given equivalence classes
+      are the same. -}
+
+    (===) :: c -> c -> m Bool
+
+    
+    {-| This function returns the descriptor of the given
+      equivalence class. -}
+
+    desc :: c -> m d
+
+    {-| This function removes the given equivalence class. If the
+      equivalence class does not exists anymore @False@ is returned;
+      otherwise @True@. -}
+
+    remove :: c -> m Bool
+
+instance (Monad m, Ord v) => MonadEquiv (Class s d v) v d (EquivT s d v m) where
     equivalent x y = EquivT $ do
       part <- ask
       lift $ S.equivalent part x y
@@ -142,22 +178,70 @@ instance (Monad m, Ord v) => MonadEquiv c v (EquivT s c v m) where
       part <- ask
       lift $ S.equate part x y
 
-instance (MonadEquiv c v m, Monoid w) => MonadEquiv c v (WriterT w m) where
-    equivalent x y = lift $ equivalent x y
-    classDesc = lift . classDesc
-    equate x y = lift $ equate x y
+    removeClass x = EquivT $ do
+      part <- ask
+      lift $ S.removeClass part x
 
-instance (MonadEquiv c v m, Error e) => MonadEquiv c v (ErrorT e m) where
-    equivalent x y = lift $ equivalent x y
-    classDesc = lift . classDesc
-    equate x y = lift $ equate x y
+    getClass x = EquivT $ do
+      part <- ask
+      lift $ S.getClass part x
 
-instance (MonadEquiv c v m) => MonadEquiv c v (StateT s m) where
-    equivalent x y = lift $ equivalent x y
-    classDesc = lift . classDesc
-    equate x y = lift $ equate x y
+    combine x y = EquivT $ do
+      part <- ask
+      lift $ S.combine part x y
 
-instance (MonadEquiv c v m) => MonadEquiv c v (ReaderT r m) where
+    x === y = EquivT $ do
+      part <- ask
+      lift $ S.same part x y
+
+    desc x = EquivT $ do
+      part <- ask
+      lift $ S.desc part x
+
+    remove x = EquivT $ do
+      part <- ask
+      lift $ S.remove part x
+
+instance (MonadEquiv c v d m, Monoid w) => MonadEquiv c v d (WriterT w m) where
     equivalent x y = lift $ equivalent x y
     classDesc = lift . classDesc
     equate x y = lift $ equate x y
+    removeClass x = lift $ removeClass x
+    getClass x = lift $ getClass x
+    combine x y = lift $ combine x y
+    x === y = lift $ (===) x y
+    desc x = lift $ desc x
+    remove x = lift $ remove x
+
+instance (MonadEquiv c v d m, Error e) => MonadEquiv c v d (ErrorT e m) where
+    equivalent x y = lift $ equivalent x y
+    classDesc = lift . classDesc
+    equate x y = lift $ equate x y
+    removeClass x = lift $ removeClass x
+    getClass x = lift $ getClass x
+    combine x y = lift $ combine x y
+    x === y = lift $ (===) x y
+    desc x = lift $ desc x
+    remove x = lift $ remove x
+
+instance (MonadEquiv c v d m) => MonadEquiv c v d (StateT s m) where
+    equivalent x y = lift $ equivalent x y
+    classDesc = lift . classDesc
+    equate x y = lift $ equate x y
+    removeClass x = lift $ removeClass x
+    getClass x = lift $ getClass x
+    combine x y = lift $ combine x y
+    x === y = lift $ (===) x y
+    desc x = lift $ desc x
+    remove x = lift $ remove x
+
+instance (MonadEquiv c v d m) => MonadEquiv c v d (ReaderT r m) where
+    equivalent x y = lift $ equivalent x y
+    classDesc = lift . classDesc
+    equate x y = lift $ equate x y
+    removeClass x = lift $ removeClass x
+    getClass x = lift $ getClass x
+    combine x y = lift $ combine x y
+    x === y = lift $ (===) x y
+    desc x = lift $ desc x
+    remove x = lift $ remove x
