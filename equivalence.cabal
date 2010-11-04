@@ -1,5 +1,5 @@
 Name:            equivalence
-Version:         0.2.0
+Version:         0.2.2
 License:         BSD3
 License-File:    LICENSE
 Author:          Patrick Bahr <paba@diku.dk>
@@ -33,7 +33,7 @@ Library
 
 Executable test
   Main-is:		Data_Test.hs
-  Build-Depends:	base >= 4, template-haskell, containers, mtl, QuickCheck >= 2, test-framework, test-framework-quickcheck2, test-framework-th
+  Build-Depends:	base >= 4, template-haskell, containers, mtl, QuickCheck >= 2, test-framework, test-framework-quickcheck2
   hs-source-dirs:	src testsuite/tests
   ghc-options:          -fhpc
   if !flag(test)

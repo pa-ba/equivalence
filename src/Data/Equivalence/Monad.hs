@@ -26,9 +26,13 @@ module Data.Equivalence.Monad
     (
      MonadEquiv(..),
      EquivT(..),
+     EquivT',
      EquivM,
+     EquivM',
      runEquivT,
-     runEquivM
+     runEquivT',
+     runEquivM,
+     runEquivM'
      ) where
 
 import Data.Equivalence.STT hiding (equate, equateAll, equivalent, classDesc, removeClass,
@@ -54,6 +58,12 @@ of type @m a@. -}
 
 newtype EquivT s c v m a = EquivT {unEquivT :: ReaderT (Equiv s c v) (STT s m) a}
 
+
+{-| This monad transformer is a special case of 'EquivT' that only
+maintains trivial equivalence class descriptors of type @()@. -}
+
+type EquivT' s = EquivT s ()
+
 {-| This monad encapsulates computations maintaining an equivalence
 relation. A monadic computation of type 'EquivM' @s c v a@ maintains a
 state space indexed by type @s@, maintains an equivalence relation
@@ -61,6 +71,12 @@ over elements of type @v@ with equivalence class descriptors of type
 @c@ and returns a value of type @a@.  -}
 
 type EquivM s c v = EquivT s c v Identity
+
+
+{-| This monad is a special case of 'EquivM' that only maintains
+trivial equivalence class descriptors of type @()@. -}
+
+type EquivM' s v = EquivM s () v
 
 instance (Monad m) => Monad (EquivT s c v m) where
     EquivT m >>= f = EquivT (m >>= (unEquivT . f))
@@ -101,6 +117,13 @@ runEquivT mk com m = runST $ do
   p <- leastEquiv mk com
   (`runReaderT` p) $ unEquivT m
 
+
+{-| This function is a special case of 'runEquivT' that only maintains
+trivial equivalence class descriptors of type @()@. -}
+
+runEquivT' :: (Monad m) => (forall s. EquivT' s v m a) -> m a
+runEquivT' = runEquivT (const ()) (\_ _-> ())
+
 {-| This function runs a monadic computation that maintains an
 equivalence relation. The first tow arguments specify how to construct
 an equivalence class descriptor for a singleton class and how to
@@ -111,6 +134,12 @@ runEquivM :: (v -> c) -- ^ used to construct an equivalence class descriptor for
           -> (forall s. EquivM s c v a)
           -> a
 runEquivM sing comb m = runIdentity $ runEquivT sing comb m
+
+{-| This function is a special case of 'runEquivM' that only maintains
+trivial equivalence class descriptors of type @()@. -}
+
+runEquivM' :: (forall s. EquivM' s v a) -> a
+runEquivM' = runEquivM (const ()) (\_ _ -> ())
 
 {-| This class specifies the interface for a monadic computation that
 maintains an equivalence relation.  -}
