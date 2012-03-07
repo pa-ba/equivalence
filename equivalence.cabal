@@ -1,9 +1,11 @@
 Name:            equivalence
-Version:         0.2.2
+Version:         0.2.3
 License:         BSD3
 License-File:    LICENSE
-Author:          Patrick Bahr <paba@diku.dk>
-Maintainer:      Patrick Bahr <paba@diku.dk>
+Author:          Patrick Bahr
+Maintainer:      paba@diku.dk
+Homepage:        https://bitbucket.org/paba/equivalence/
+bug-reports:     https://bitbucket.org/paba/equivalence/issues/new
 Synopsis:        Maintaining an equivalence relation implemented as union-find using STT.
 Description:	 
   This is an implementation of Tarjan's Union-Find algorithm (Robert
@@ -15,13 +17,16 @@ Description:
   ST monad transformer (instead of the IO monad).
 Category:        Algorithms, Data
 Stability:       provisional
-Build-Type:      Custom
-Cabal-Version:   >= 1.6
+Build-Type:      Simple
+Cabal-Version:   >=1.9.2
 
 
-flag test
-  description: Build test executable.
-  default:     False
+Test-Suite test
+  Type:                 exitcode-stdio-1.0
+  Main-is:		Data_Test.hs
+  hs-source-dirs:	src testsuite/tests
+  Build-Depends:        base >= 4, template-haskell, containers, mtl, QuickCheck >= 2,
+                        test-framework, test-framework-quickcheck2, STMonadTrans
 
 Library
   Build-Depends:
@@ -30,11 +35,3 @@ Library
     Data.Equivalence.STT,
     Data.Equivalence.Monad
   Hs-Source-Dirs: src
-
-Executable test
-  Main-is:		Data_Test.hs
-  Build-Depends:	base >= 4, template-haskell, containers, mtl, QuickCheck >= 2, test-framework, test-framework-quickcheck2
-  hs-source-dirs:	src testsuite/tests
-  ghc-options:          -fhpc
-  if !flag(test)
-    buildable:     False
