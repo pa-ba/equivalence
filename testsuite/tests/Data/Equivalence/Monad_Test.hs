@@ -4,7 +4,7 @@ module Data.Equivalence.Monad_Test where
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
-import Test.QuickCheck
+import Test.QuickCheck hiding ((===))
 
 import Data.Equivalence.Monad
 
