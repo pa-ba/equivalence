@@ -47,6 +47,7 @@ import Control.Monad.State
 import Control.Monad.Trans
 import Control.Monad.Identity
 import Control.Monad.ST.Trans
+import Control.Applicative
 
 
 {-| This monad transformer encapsulates computations maintaining an
@@ -77,6 +78,13 @@ type EquivM s c v = EquivT s c v Identity
 trivial equivalence class descriptors of type @()@. -}
 
 type EquivM' s v = EquivM s () v
+
+instance Functor m => Functor (EquivT s c v m) where
+  fmap f (EquivT m) = EquivT $ fmap f m
+
+instance (Functor m, Monad m) => Applicative (EquivT s c v m) where
+  pure = EquivT . pure
+  (EquivT f) <*> (EquivT a) = EquivT (f <*> a)
 
 instance (Monad m) => Monad (EquivT s c v m) where
     EquivT m >>= f = EquivT (m >>= (unEquivT . f))
