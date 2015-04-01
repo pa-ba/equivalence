@@ -42,7 +42,7 @@ import qualified Data.Equivalence.STT  as S
  
 import Control.Monad.Writer
 import Control.Monad.Reader
-import Control.Monad.Error
+import Control.Monad.Except
 import Control.Monad.State
 import Control.Monad.Trans
 import Control.Monad.Identity
@@ -279,7 +279,7 @@ instance (MonadEquiv c v d m, Monoid w) => MonadEquiv c v d (WriterT w m) where
     desc x = lift $ desc x
     remove x = lift $ remove x
 
-instance (MonadEquiv c v d m, Error e) => MonadEquiv c v d (ErrorT e m) where
+instance (MonadEquiv c v d m) => MonadEquiv c v d (ExceptT e m) where
     equivalent x y = lift $ equivalent x y
     classDesc = lift . classDesc
     equateAll x = lift $ equateAll x
