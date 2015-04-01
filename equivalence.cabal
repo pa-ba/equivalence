@@ -1,5 +1,5 @@
 Name:            equivalence
-Version:         0.2.6
+Version:         0.3
 License:         BSD3
 License-File:    LICENSE
 Author:          Patrick Bahr
@@ -31,12 +31,12 @@ Test-Suite test
   Main-is:		Data_Test.hs
   Other-Modules:	Data.Equivalence.Monad_Test
   hs-source-dirs:	src testsuite/tests
-  Build-Depends:        base >= 4, template-haskell, containers, mtl, QuickCheck >= 2,
+  Build-Depends:        base >= 4, template-haskell, containers, mtl >= 2.2.1, QuickCheck >= 2,
                         test-framework, test-framework-quickcheck2, STMonadTrans
 
 Library
   Build-Depends:
-    base >= 4 && < 5, containers, mtl, STMonadTrans
+    base >= 4 && < 5, containers, mtl >= 2.2.1, STMonadTrans
   Exposed-Modules:
     Data.Equivalence.STT,
     Data.Equivalence.Monad

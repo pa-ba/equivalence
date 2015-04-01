@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes, TemplateHaskell #-}
 
 module Data.Equivalence.Monad_Test where
@@ -155,7 +156,7 @@ prop_classes l1 l1' l2 x y = putStrLn (show el ++ ";" ++ show cl) `whenFail` (el
           el = runInt $ do
                  mapM equateAll l1
                  mapM removeClass l2
-                 mapM equateAll l1'
+                 mapM equateAll (l1' :: [[Int]])
                  res <- mapM classDesc l3
                  eq <- equivalent x y
                  return (res,eq)
