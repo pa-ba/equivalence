@@ -6,6 +6,11 @@
   UndecidableInstances,
   FunctionalDependencies #-}
 
+-- Suppress warnings about ''Control.Monad.Error'' being deprecated.
+
+{-# OPTIONS_GHC -fno-warn-deprecations #-}
+
+
 --------------------------------------------------------------------------------
 -- |
 -- Module      : Data.Equivalence.Monad
@@ -43,6 +48,7 @@ import qualified Data.Equivalence.STT  as S
 import Control.Monad.Writer
 import Control.Monad.Reader
 import Control.Monad.Except
+import Control.Monad.Error
 import Control.Monad.State
 import Control.Monad.Trans
 import Control.Monad.Identity
@@ -279,6 +285,19 @@ instance (MonadEquiv c v d m, Monoid w) => MonadEquiv c v d (WriterT w m) where
     desc x = lift $ desc x
     remove x = lift $ remove x
 
+instance (MonadEquiv c v d m, Error e) => MonadEquiv c v d (ErrorT e m) where
+    equivalent x y = lift $ equivalent x y
+    classDesc = lift . classDesc
+    equateAll x = lift $ equateAll x
+    equate x y = lift $ equate x y
+    removeClass x = lift $ removeClass x
+    getClass x = lift $ getClass x
+    combineAll x = lift $ combineAll x
+    combine x y = lift $ combine x y
+    x === y = lift $ (===) x y
+    desc x = lift $ desc x
+    remove x = lift $ remove x
+
 instance (MonadEquiv c v d m) => MonadEquiv c v d (ExceptT e m) where
     equivalent x y = lift $ equivalent x y
     classDesc = lift . classDesc
@@ -291,6 +310,7 @@ instance (MonadEquiv c v d m) => MonadEquiv c v d (ExceptT e m) where
     x === y = lift $ (===) x y
     desc x = lift $ desc x
     remove x = lift $ remove x
+
 
 instance (MonadEquiv c v d m) => MonadEquiv c v d (StateT s m) where
     equivalent x y = lift $ equivalent x y
