@@ -1,0 +1,2 @@
+0.3
+  add suport for Control.Monad.Except (thus the new dependency constraint 'mtl >= 2.2.1')
