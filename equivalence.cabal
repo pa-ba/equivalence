@@ -20,6 +20,8 @@ Stability:       provisional
 Build-Type:      Simple
 Cabal-Version:   >=1.9.2
 
+Extra-Source-Files: CHANGES.txt
+
 
 source-repository head
   type:     hg
