@@ -1,2 +1,4 @@
+0.3.0.1
+  add CHANGES.txt to .cabal file
 0.3
   add suport for Control.Monad.Except (thus the new dependency constraint 'mtl >= 2.2.1')
