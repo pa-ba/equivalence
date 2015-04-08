@@ -33,12 +33,14 @@ Test-Suite test
   Main-is:		Data_Test.hs
   Other-Modules:	Data.Equivalence.Monad_Test
   hs-source-dirs:	src testsuite/tests
-  Build-Depends:        base >= 4, template-haskell, containers, mtl >= 2.2.1, QuickCheck >= 2,
-                        test-framework, test-framework-quickcheck2, STMonadTrans
+  Build-Depends:        base >= 4, template-haskell, containers, mtl >= 2.0.1, QuickCheck >= 2,
+                        test-framework, test-framework-quickcheck2, STMonadTrans,
+                        transformers >= 0.2, transformers-compat >= 0.3
 
 Library
   Build-Depends:
-    base >= 4 && < 5, containers, mtl >= 2.2.1, STMonadTrans
+    base >= 4 && < 5, containers, mtl >= 2.0.1, STMonadTrans,
+    transformers >= 0.2, transformers-compat >= 0.3
   Exposed-Modules:
     Data.Equivalence.STT,
     Data.Equivalence.Monad

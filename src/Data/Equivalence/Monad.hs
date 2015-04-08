@@ -47,12 +47,13 @@ import qualified Data.Equivalence.STT  as S
  
 import Control.Monad.Writer
 import Control.Monad.Reader
-import Control.Monad.Except
-import Control.Monad.Error
+import Control.Monad.Error.Class
 import Control.Monad.State
 import Control.Monad.Trans
 import Control.Monad.Identity
 import Control.Monad.ST.Trans
+import Control.Monad.Trans.Error (ErrorT)
+import Control.Monad.Trans.Except (ExceptT)
 import Control.Applicative
 
 
