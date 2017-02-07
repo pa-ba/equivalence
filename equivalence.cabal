@@ -4,8 +4,8 @@ License:         BSD3
 License-File:    LICENSE
 Author:          Patrick Bahr
 Maintainer:      paba@di.ku.dk
-Homepage:        https://bitbucket.org/paba/equivalence/
-bug-reports:     https://bitbucket.org/paba/equivalence/issues/new
+Homepage:        https://github.com/pa-ba/equivalence
+bug-reports:     https://github.com/pa-ba/equivalence/issues/new
 Synopsis:        Maintaining an equivalence relation implemented as union-find using STT.
 Description:	 
   This is an implementation of Tarjan's Union-Find algorithm (Robert
@@ -24,8 +24,8 @@ Extra-Source-Files: CHANGES.txt
 
 
 source-repository head
-  type:     hg
-  location: https://bitbucket.org/paba/equivalence/
+  type:     git
+  location: https://github.com/pa-ba/equivalence
 
 
 Test-Suite test
