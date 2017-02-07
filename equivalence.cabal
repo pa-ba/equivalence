@@ -3,7 +3,7 @@ Version:         0.3.2
 License:         BSD3
 License-File:    LICENSE
 Author:          Patrick Bahr
-Maintainer:      paba@di.ku.dk
+Maintainer:      paba@itu.dk
 Homepage:        https://github.com/pa-ba/equivalence
 bug-reports:     https://github.com/pa-ba/equivalence/issues/new
 Synopsis:        Maintaining an equivalence relation implemented as union-find using STT.
