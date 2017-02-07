@@ -1,4 +1,4 @@
-# Equivalence
+# Equivalence [![Build Status](https://travis-ci.org/pa-ba/equivalence.svg?branch=master)](https://travis-ci.org/pa-ba/equivalence)
 
 This is an implementation of Tarjan's Union-Find algorithm (Robert
 E. Tarjan. "Efficiency of a Good But Not Linear Set Union
