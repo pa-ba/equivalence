@@ -89,7 +89,7 @@ type EquivM' s v = EquivM s () v
 instance Functor m => Functor (EquivT s c v m) where
   fmap f (EquivT m) = EquivT $ fmap f m
 
-instance (Functor m, Monad m) => Applicative (EquivT s c v m) where
+instance (Applicative m, Monad m) => Applicative (EquivT s c v m) where
   pure = EquivT . pure
   (EquivT f) <*> (EquivT a) = EquivT (f <*> a)
 
@@ -122,7 +122,7 @@ equivalence relation. The first tow arguments specify how to construct
 an equivalence class descriptor for a singleton class and how to
 combine two equivalence class descriptors. -}
 
-runEquivT :: (Monad m)
+runEquivT :: (Monad m, Applicative m)
           => (v -> c) -- ^ used to construct an equivalence class descriptor for a singleton class
           -> (c -> c -> c) -- ^ used to combine the equivalence class descriptor of two classes
                            --   which are meant to be combined.
@@ -136,7 +136,7 @@ runEquivT mk com m = runST $ do
 {-| This function is a special case of 'runEquivT' that only maintains
 trivial equivalence class descriptors of type @()@. -}
 
-runEquivT' :: (Monad m) => (forall s. EquivT' s v m a) -> m a
+runEquivT' :: (Monad m, Applicative m) => (forall s. EquivT' s v m a) -> m a
 runEquivT' = runEquivT (const ()) (\_ _-> ())
 
 {-| This function runs a monadic computation that maintains an
@@ -159,7 +159,7 @@ runEquivM' = runEquivM (const ()) (\_ _ -> ())
 {-| This class specifies the interface for a monadic computation that
 maintains an equivalence relation.  -}
 
-class (Monad m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m -> d where
+class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m -> d where
     {-| This function decides whether the two given elements are
         equivalent in the current equivalence relation -}
 
@@ -228,7 +228,7 @@ class (Monad m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m -> d where
 
                                      
 
-instance (Monad m, Ord v) => MonadEquiv (Class s d v) v d (EquivT s d v m) where
+instance (Monad m, Applicative m, Ord v) => MonadEquiv (Class s d v) v d (EquivT s d v m) where
     equivalent x y = EquivT $ do
       part <- ask
       lift $ S.equivalent part x y
