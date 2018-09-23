@@ -249,20 +249,23 @@ equivalence class -}
 equateEntry :: (Monad m, Applicative m, Ord a) => Equiv s c a -> Entry s c a -> Entry s c a -> STT s m (Entry s c a)
 equateEntry Equiv {combDesc = mkDesc} repx@(Entry rx) repy@(Entry ry) = 
   if (rx /= ry) then do
-    dx@Root{entryWeight = wx, entryDesc = chx, entryValue = vx} <- readSTRef rx
-    dy@Root{entryWeight = wy, entryDesc = chy, entryValue = vy} <- readSTRef ry
-    if  wx >= wy
-      then do
-        writeSTRef ry Node {entryParent = repx, entryValue = vy}
-        writeSTRef rx dx{entryWeight = wx + wy, entryDesc = mkDesc chx chy}
-        return repx
-      else do
-       writeSTRef rx Node {entryParent = repy, entryValue = vx}
-       writeSTRef ry dy{entryWeight = wx + wy, entryDesc = mkDesc chx chy}
-       return repy
-    else return  repx
+    dx <- readSTRef rx
+    dy <- readSTRef ry
+    case (dx, dy) of
+      ( Root{entryWeight = wx, entryDesc = chx, entryValue = vx}
+        , Root{entryWeight = wy, entryDesc = chy, entryValue = vy} ) ->
+        if  wx >= wy
+        then do
+          writeSTRef ry Node {entryParent = repx, entryValue = vy}
+          writeSTRef rx dx{entryWeight = wx + wy, entryDesc = mkDesc chx chy}
+          return repx
+        else do
+          writeSTRef rx Node {entryParent = repy, entryValue = vx}
+          writeSTRef ry dy{entryWeight = wx + wy, entryDesc = mkDesc chx chy}
+          return repy
 
-
+      _ -> fail "error on `equateEntry`"
+  else return  repx
 
 combineEntries :: (Monad m, Applicative m, Ord a)
                => Equiv s c a -> [b] -> (b -> STT s m (Entry s c a)) -> STT s m ()
