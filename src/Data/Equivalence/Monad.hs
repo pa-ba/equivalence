@@ -56,6 +56,8 @@ import Control.Monad.Trans.Error (ErrorT)
 import Control.Monad.Trans.Except (ExceptT)
 import Control.Applicative
 
+import qualified Control.Monad.Fail as Fail
+
 
 {-| This monad transformer encapsulates computations maintaining an
 equivalence relation. A monadic computation of type 'EquivT' @s c v m
@@ -99,6 +101,9 @@ instance (Monad m) => Monad (EquivT s c v m) where
 
 instance MonadTrans (EquivT s c v) where
     lift = EquivT . lift . lift
+
+instance Monad m => Fail.MonadFail (EquivT s c v m) where
+    fail = error
 
 instance (MonadReader r m) => MonadReader r (EquivT s c v m) where
     ask = EquivT $ lift ask
