@@ -1,5 +1,5 @@
 Name:            equivalence
-Version:         0.3.3
+Version:         0.3.4
 License:         BSD3
 License-File:    LICENSE
 Author:          Patrick Bahr
@@ -31,7 +31,7 @@ source-repository head
 Test-Suite test
   Type:                 exitcode-stdio-1.0
   Main-is:		Data_Test.hs
-  Other-Modules:	Data.Equivalence.Monad_Test
+  Other-Modules:	Data.Equivalence.Monad_Test,Data.Equivalence.Monad, Data.Equivalence.STT
   hs-source-dirs:	src testsuite/tests
   Build-Depends:        base >= 4, template-haskell, containers, mtl >= 2.0.1, QuickCheck >= 2,
                         test-framework, test-framework-quickcheck2, STMonadTrans >= 0.4.3,
