@@ -62,7 +62,6 @@ module Data.Equivalence.STT
 import Control.Monad.ST.Trans
 import Control.Monad
 import Control.Applicative
-import qualified Control.Monad.Fail as Fail
 
 import Data.Maybe
 
@@ -242,12 +241,12 @@ getEntry Equiv { entries = mref} val = do
 
 
 
-{-| This function equates the two given elements. That is, it unions
-the equivalence classes of the two elements and combines their
-descriptor. The returned entry is the representative of the new
+{-| This function equates the two given (representative) elements. That
+is, it unions the equivalence classes of the two elements and combines
+their descriptor. The returned entry is the representative of the new
 equivalence class -}
 
-equateEntry :: (Fail.MonadFail m, Applicative m, Ord a) => Equiv s c a -> Entry s c a -> Entry s c a -> STT s m (Entry s c a)
+equateEntry :: (Monad m, Applicative m, Ord a) => Equiv s c a -> Entry s c a -> Entry s c a -> STT s m (Entry s c a)
 equateEntry Equiv {combDesc = mkDesc} repx@(Entry rx) repy@(Entry ry) = 
   if (rx /= ry) then do
     dx <- readSTRef rx
@@ -265,10 +264,12 @@ equateEntry Equiv {combDesc = mkDesc} repx@(Entry rx) repy@(Entry ry) =
           writeSTRef ry dy{entryWeight = wx + wy, entryDesc = mkDesc chx chy}
           return repy
 
-      _ -> fail "error on `equateEntry`"
+      _ -> error "error on `equateEntry`"
+      -- this should not happen as this function is only called by
+      -- 'combineEntries', which always uses representative entries
   else return  repx
 
-combineEntries :: (Fail.MonadFail m, Applicative m, Ord a)
+combineEntries :: (Monad m, Applicative m, Ord a)
                => Equiv s c a -> [b] -> (b -> STT s m (Entry s c a)) -> STT s m ()
 combineEntries  _ [] _ = return ()
 combineEntries eq (e:es) rep = do
@@ -285,7 +286,7 @@ combineEntries eq (e:es) rep = do
 list. Afterwards all elements in the argument list represent the same
 equivalence class! -}
 
-combineAll :: (Fail.MonadFail m, Applicative m, Ord a) => Equiv s c a -> [Class s c a] -> STT s m ()
+combineAll :: (Monad m, Applicative m, Ord a) => Equiv s c a -> [Class s c a] -> STT s m ()
 combineAll eq cls = combineEntries eq cls (classRep eq)
 
 
@@ -294,7 +295,7 @@ classes. Afterwards both arguments represent the same equivalence
 class! One of it is returned in order to represent the new combined
 equivalence class. -}
 
-combine :: (Fail.MonadFail m, Applicative m, Ord a) => Equiv s c a -> Class s c a -> Class s c a -> STT s m (Class s c a)
+combine :: (Monad m, Applicative m, Ord a) => Equiv s c a -> Class s c a -> Class s c a -> STT s m (Class s c a)
 combine eq x y = combineAll eq [x,y] >> return x
 
 
@@ -302,14 +303,14 @@ combine eq x y = combineAll eq [x,y] >> return x
 unions the equivalence classes of the elements and combines their
 descriptor. -}
 
-equateAll :: (Fail.MonadFail m, Applicative m, Ord a) => Equiv s c a -> [a] -> STT s m ()
+equateAll :: (Monad m, Applicative m, Ord a) => Equiv s c a -> [a] -> STT s m ()
 equateAll eq cls = combineEntries eq cls (representative eq)
 
 {-| This function equates the two given elements. That is, it unions
 the equivalence classes of the two elements and combines their
 descriptor. -}
 
-equate :: (Fail.MonadFail m, Applicative m, Ord a) => Equiv s c a -> a -> a -> STT s m ()
+equate :: (Monad m, Applicative m, Ord a) => Equiv s c a -> a -> a -> STT s m ()
 equate eq x y = equateAll eq [x,y]
 
 

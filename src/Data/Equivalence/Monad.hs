@@ -55,7 +55,6 @@ import Control.Monad.ST.Trans
 import Control.Monad.Trans.Error (ErrorT)
 import Control.Monad.Trans.Except (ExceptT)
 import Control.Applicative
-
 import qualified Control.Monad.Fail as Fail
 
 
@@ -233,7 +232,7 @@ class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m 
 
                                      
 
-instance (Fail.MonadFail m, Applicative m, Ord v) => MonadEquiv (Class s d v) v d (EquivT s d v m) where
+instance (Monad m, Applicative m, Ord v) => MonadEquiv (Class s d v) v d (EquivT s d v m) where
     equivalent x y = EquivT $ do
       part <- ask
       lift $ S.equivalent part x y

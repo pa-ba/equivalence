@@ -3,8 +3,6 @@
 
 module Data.Equivalence.Monad_Test where
 
-import Test.Framework
-import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck hiding ((===))
 
 import Data.Equivalence.Monad
@@ -13,27 +11,11 @@ import Control.Monad
 import Data.Set (Set)
 import qualified Data.Set as Set
 
+
+
 --------------------------------------------------------------------------------
 -- Test Suits
 --------------------------------------------------------------------------------
-
-main = defaultMain [tests]
-
-tests = testGroup "Monad" [testProperty "singleton" prop_singleton,
-         testProperty "equateAll" prop_equateAll,
-         testProperty "combineAll" prop_combineAll,
-         testProperty "equate" prop_equate,
-         testProperty "combine" prop_combine,
-         testProperty "equateOverlap" prop_equateOverlap,
-         testProperty "combineOverlap" prop_combineOverlap,
-         testProperty "equateAllOverlap" prop_equateAllOverlap,
-         testProperty "combineAllOverlap" prop_combineAllOverlap,
-         testProperty "removeClass" prop_removeClass,
-         testProperty "remove" prop_remove,
-         testProperty "removeClass'" prop_removeClass',
-         testProperty "remove'" prop_remove',
-         testProperty "classes" prop_classes
-         ]
 
 
 -- run :: (Ord a) => STT s Identity (Equiv s (Set a) a)
@@ -172,3 +154,8 @@ prop_classes l1 l1' l2 x y = putStrLn (show el ++ ";" ++ show cl) `whenFail` (el
                  [cx,cy] <- getClasses [x,y]
                  eq <- cx === cy
                  return (res,eq)
+
+
+return []
+main = $quickCheckAll
+
