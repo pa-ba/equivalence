@@ -122,7 +122,7 @@ instance (MonadError e m) => MonadError e (EquivT s c v m) where
     catchError (EquivT m) f = EquivT $ catchError m (unEquivT . f)
     
 {-| This function runs a monadic computation that maintains an
-equivalence relation. The first tow arguments specify how to construct
+equivalence relation. The first two arguments specify how to construct
 an equivalence class descriptor for a singleton class and how to
 combine two equivalence class descriptors. -}
 
