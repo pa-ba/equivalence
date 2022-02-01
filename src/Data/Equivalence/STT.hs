@@ -61,7 +61,6 @@ module Data.Equivalence.STT
 
 import Control.Monad.ST.Trans
 import Control.Monad
-import Control.Applicative
 
 import Data.Maybe
 

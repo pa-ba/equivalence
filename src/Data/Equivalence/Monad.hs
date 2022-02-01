@@ -49,12 +49,10 @@ import Control.Monad.Writer
 import Control.Monad.Reader
 import Control.Monad.Error.Class
 import Control.Monad.State
-import Control.Monad.Trans
 import Control.Monad.Identity
 import Control.Monad.ST.Trans
 import Control.Monad.Trans.Error (ErrorT)
 import Control.Monad.Trans.Except (ExceptT)
-import Control.Applicative
 import qualified Control.Monad.Fail as Fail
 
 
@@ -96,7 +94,7 @@ instance (Applicative m, Monad m) => Applicative (EquivT s c v m) where
 
 instance (Monad m) => Monad (EquivT s c v m) where
     EquivT m >>= f = EquivT (m >>= (unEquivT . f))
-    return = EquivT . return
+    return = pure
 
 instance MonadTrans (EquivT s c v) where
     lift = EquivT . lift . lift

@@ -55,6 +55,14 @@ Library
     Build-Depends:
       fail
 
+  ghc-options:
+      -Wall
+      -fno-warn-name-shadowing
+      -fno-warn-incomplete-record-updates
+  if impl(ghc >= 8.0)
+    ghc-options:
+      -Wcompat
+
 Test-Suite test
   Type:                 exitcode-stdio-1.0
   Main-is:              Data_Test.hs
@@ -79,3 +87,13 @@ Test-Suite test
   if impl(ghc < 8.0)
     Build-Depends:
       fail
+
+  ghc-options:
+      -Wall
+      -fno-warn-name-shadowing
+      -fno-warn-incomplete-record-updates
+      -fno-warn-missing-signatures
+      -fno-warn-unused-do-bind
+  if impl(ghc >= 8.0)
+    ghc-options:
+      -Wcompat
