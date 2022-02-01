@@ -1,4 +1,4 @@
-Cabal-Version:   >= 1.9.2
+Cabal-Version:   >= 1.10
 Name:            equivalence
 Version:         0.3.5
 License:         BSD3
@@ -6,7 +6,7 @@ License-File:    LICENSE
 Author:          Patrick Bahr
 Maintainer:      paba@itu.dk
 Homepage:        https://github.com/pa-ba/equivalence
-bug-reports:     https://github.com/pa-ba/equivalence/issues/new
+bug-reports:     https://github.com/pa-ba/equivalence/issues
 Synopsis:        Maintaining an equivalence relation implemented as union-find using STT.
 Description:
   This is an implementation of Tarjan's Union-Find algorithm (Robert
@@ -32,6 +32,7 @@ Library
     Data.Equivalence.STT
     Data.Equivalence.Monad
   Hs-Source-Dirs:       src
+  default-language:     Haskell2010
   Build-Depends:
     base                   >= 4 && < 5
     , containers
@@ -51,6 +52,7 @@ Test-Suite test
     Data.Equivalence.Monad
     Data.Equivalence.STT
   hs-source-dirs:       src testsuite/tests
+  default-language:     Haskell2010
   Build-Depends:
     base                   >= 4
     , template-haskell
