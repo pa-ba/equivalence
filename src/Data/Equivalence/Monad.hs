@@ -6,11 +6,6 @@
   UndecidableInstances,
   FunctionalDependencies #-}
 
--- Suppress warnings about ''Control.Monad.Error'' being deprecated.
-
-{-# OPTIONS_GHC -fno-warn-deprecations #-}
-
-
 --------------------------------------------------------------------------------
 -- |
 -- Module      : Data.Equivalence.Monad
@@ -51,7 +46,6 @@ import Control.Monad.Error.Class
 import Control.Monad.State
 import Control.Monad.Identity
 import Control.Monad.ST.Trans
-import Control.Monad.Trans.Error (ErrorT)
 import Control.Monad.Trans.Except (ExceptT)
 import qualified Control.Monad.Fail as Fail
 
@@ -130,7 +124,7 @@ runEquivT :: (Monad m, Applicative m)
                            --   which are meant to be combined.
           -> (forall s. EquivT s c v m a)
           -> m a
-runEquivT mk com m = runST $ do
+runEquivT mk com m = runSTT $ do
   p <- leastEquiv mk com
   (`runReaderT` p) $ unEquivT m
 
@@ -276,19 +270,6 @@ instance (Monad m, Applicative m, Ord v) => MonadEquiv (Class s d v) v d (EquivT
       lift $ S.remove part x
 
 instance (MonadEquiv c v d m, Monoid w) => MonadEquiv c v d (WriterT w m) where
-    equivalent x y = lift $ equivalent x y
-    classDesc = lift . classDesc
-    equateAll x = lift $ equateAll x
-    equate x y = lift $ equate x y
-    removeClass x = lift $ removeClass x
-    getClass x = lift $ getClass x
-    combineAll x = lift $ combineAll x
-    combine x y = lift $ combine x y
-    x === y = lift $ (===) x y
-    desc x = lift $ desc x
-    remove x = lift $ remove x
-
-instance (MonadEquiv c v d m, Error e) => MonadEquiv c v d (ErrorT e m) where
     equivalent x y = lift $ equivalent x y
     classDesc = lift . classDesc
     equateAll x = lift $ equateAll x
