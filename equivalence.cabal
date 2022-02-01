@@ -47,7 +47,7 @@ Library
   Build-Depends:
     base                   >= 4.8    && < 5
     , containers
-    , mtl                  >= 2.0.1
+    , mtl                  >= 2.2.1
     , STMonadTrans         >= 0.4.3
     , transformers         >= 0.2
     , transformers-compat  >= 0.3
