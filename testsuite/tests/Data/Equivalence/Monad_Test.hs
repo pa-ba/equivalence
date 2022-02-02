@@ -108,7 +108,7 @@ prop_remove x l' = runInt $ do
   cx <- getClass x
   remove cx
   allM check l
-      where check e = liftM (== Set.singleton e) $ getClass e >>= desc 
+      where check e = liftM (== Set.singleton e) $ getClass e >>= desc
 
 prop_removeClass' x y l1' l2' = runInt $ do
   let l1 = x:l1'
@@ -158,4 +158,3 @@ prop_classes l1 l1' l2 x y = putStrLn (show el ++ ";" ++ show cl) `whenFail` (el
 
 return []
 main = $quickCheckAll
-

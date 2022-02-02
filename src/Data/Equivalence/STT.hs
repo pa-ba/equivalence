@@ -13,8 +13,8 @@
 -- This is an implementation of Tarjan's Union-Find algorithm (Robert
 -- E. Tarjan. "Efficiency of a Good But Not Linear Set Union
 -- Algorithm", JACM 22(2), 1975) in order to maintain an equivalence
--- relation. 
--- 
+-- relation.
+--
 -- This implementation is a port of the /union-find/ package using the
 -- ST monad transformer (instead of the IO monad).
 --
@@ -39,7 +39,7 @@
 --------------------------------------------------------------------------------
 
 module Data.Equivalence.STT
-  ( 
+  (
    -- * Equivalence Relation
     Equiv
   , Class
@@ -61,7 +61,6 @@ module Data.Equivalence.STT
 
 import Control.Monad.ST.Trans
 import Control.Monad
-import Control.Applicative
 
 import Data.Maybe
 
@@ -103,7 +102,7 @@ descriptors of type @c@ and has elements of type @a@. -}
 
 data Equiv s c a = Equiv {
       -- | maps elements to their entry in the tree data structure
-      entries :: Entries s c a, 
+      entries :: Entries s c a,
       -- | constructs an equivalence class descriptor for a singleton class
       singleDesc :: a -> c,
       -- | combines the equivalence class descriptor of two classes
@@ -122,7 +121,7 @@ leastEquiv :: (Monad m, Applicative m)
            -> (c -> c -> c) -- ^ used to combine the equivalence class descriptor of two classes
                             --   which are meant to be combined.
            -> STT s m (Equiv s c a)
-leastEquiv mk com = do 
+leastEquiv mk com = do
   es <- newSTRef Map.empty
   return Equiv {entries = es, singleDesc = mk, combDesc = com}
 
@@ -182,7 +181,7 @@ classRep eq (Class p) = do
                 return en'
               else return (fromMaybe en mrepr)
     else return (fromMaybe entry mrepr)
-  
+
 
 {-| This function constructs a new (root) entry containing the given
 entry's value, inserts it into the lookup table (thereby removing any
@@ -216,10 +215,10 @@ mkEntry Equiv {entries = mref, singleDesc = mkDesc} val = do
 contained in. -}
 
 getClass :: (Monad m, Applicative m, Ord a) => Equiv s c a -> a -> STT s m (Class s c a)
-getClass eq v = do 
+getClass eq v = do
   en <- (getEntry' eq v)
   liftM Class $ newSTRef en
-  
+
 
 getEntry' :: (Monad m, Applicative m, Ord a) => Equiv s c a -> a -> STT s m (Entry s c a)
 getEntry' eq v = do
@@ -247,7 +246,7 @@ their descriptor. The returned entry is the representative of the new
 equivalence class -}
 
 equateEntry :: (Monad m, Applicative m, Ord a) => Equiv s c a -> Entry s c a -> Entry s c a -> STT s m (Entry s c a)
-equateEntry Equiv {combDesc = mkDesc} repx@(Entry rx) repy@(Entry ry) = 
+equateEntry Equiv {combDesc = mkDesc} repx@(Entry rx) repy@(Entry ry) =
   if (rx /= ry) then do
     dx <- readSTRef rx
     dy <- readSTRef ry
@@ -380,10 +379,10 @@ remove eq (Class p) = do
         men <- getEntry eq v
         case men of
           Nothing -> return False
-          Just en -> do      
+          Just en -> do
             writeSTRef p en
             (mentry,del) <- representative' en
-            if del 
+            if del
               then return False
               else removeEntry (fromMaybe en mentry)
                    >> return True
@@ -401,7 +400,7 @@ removeClass eq v = do
     Nothing -> return False
     Just entry -> do
       (mentry, del) <- representative' entry
-      if del 
+      if del
         then return False
         else removeEntry (fromMaybe entry mentry)
              >> return True

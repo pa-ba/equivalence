@@ -6,11 +6,6 @@
   UndecidableInstances,
   FunctionalDependencies #-}
 
--- Suppress warnings about ''Control.Monad.Error'' being deprecated.
-
-{-# OPTIONS_GHC -fno-warn-deprecations #-}
-
-
 --------------------------------------------------------------------------------
 -- |
 -- Module      : Data.Equivalence.Monad
@@ -44,17 +39,14 @@ import Data.Equivalence.STT hiding (equate, equateAll, equivalent, classDesc, re
                                     getClass , combine, combineAll, same , desc , remove )
 import qualified Data.Equivalence.STT  as S
 
- 
+
 import Control.Monad.Writer
 import Control.Monad.Reader
 import Control.Monad.Error.Class
 import Control.Monad.State
-import Control.Monad.Trans
 import Control.Monad.Identity
 import Control.Monad.ST.Trans
-import Control.Monad.Trans.Error (ErrorT)
 import Control.Monad.Trans.Except (ExceptT)
-import Control.Applicative
 import qualified Control.Monad.Fail as Fail
 
 
@@ -96,7 +88,7 @@ instance (Applicative m, Monad m) => Applicative (EquivT s c v m) where
 
 instance (Monad m) => Monad (EquivT s c v m) where
     EquivT m >>= f = EquivT (m >>= (unEquivT . f))
-    return = EquivT . return
+    return = pure
 
 instance MonadTrans (EquivT s c v) where
     lift = EquivT . lift . lift
@@ -120,7 +112,7 @@ instance (MonadState st m) => MonadState st (EquivT s c v m) where
 instance (MonadError e m) => MonadError e (EquivT s c v m) where
     throwError e = lift $ throwError e
     catchError (EquivT m) f = EquivT $ catchError m (unEquivT . f)
-    
+
 {-| This function runs a monadic computation that maintains an
 equivalence relation. The first two arguments specify how to construct
 an equivalence class descriptor for a singleton class and how to
@@ -132,7 +124,7 @@ runEquivT :: (Monad m, Applicative m)
                            --   which are meant to be combined.
           -> (forall s. EquivT s c v m a)
           -> m a
-runEquivT mk com m = runST $ do
+runEquivT mk com m = runSTT $ do
   p <- leastEquiv mk com
   (`runReaderT` p) $ unEquivT m
 
@@ -172,13 +164,13 @@ class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m 
         equivalence class. -}
 
     classDesc :: v -> m d
-    
+
     {-| This function equates the element in the given list. That is, it
       unions the equivalence classes of the elements and combines their
       descriptor. -}
 
     equateAll :: [v] -> m ()
-    
+
     {-| This function equates the given two elements. That is it
         unions the equivalence classes of the two elements. -}
 
@@ -190,20 +182,20 @@ class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m 
       returned; otherwise @True@. -}
     removeClass :: v -> m Bool
 
-                   
+
     {-| This function provides the equivalence class the given element
       is contained in. -}
 
     getClass :: v -> m c
-                
-    
+
+
     {-| This function combines all equivalence classes in the given
       list. Afterwards all elements in the argument list represent the same
       equivalence class! -}
 
     combineAll :: [c] -> m ()
 
-    
+
     {-| This function combines the two given equivalence
       classes. Afterwards both arguments represent the same equivalence
       class! One of it is returned in order to represent the new combined
@@ -211,13 +203,13 @@ class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m 
 
     combine :: c -> c -> m c
     combine x y = combineAll [x,y] >> return x
-               
+
     {-| This function decides whether the two given equivalence classes
       are the same. -}
 
     (===) :: c -> c -> m Bool
 
-    
+
     {-| This function returns the descriptor of the given
       equivalence class. -}
 
@@ -230,7 +222,7 @@ class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m 
     remove :: c -> m Bool
 
 
-                                     
+
 
 instance (Monad m, Applicative m, Ord v) => MonadEquiv (Class s d v) v d (EquivT s d v m) where
     equivalent x y = EquivT $ do
@@ -240,11 +232,11 @@ instance (Monad m, Applicative m, Ord v) => MonadEquiv (Class s d v) v d (EquivT
     classDesc x = EquivT $ do
       part <- ask
       lift $ S.classDesc part x
-           
+
     equateAll x = EquivT $ do
       part <- ask
       lift $ S.equateAll part x
-           
+
     equate x y = EquivT $ do
       part <- ask
       lift $ S.equate part x y
@@ -278,19 +270,6 @@ instance (Monad m, Applicative m, Ord v) => MonadEquiv (Class s d v) v d (EquivT
       lift $ S.remove part x
 
 instance (MonadEquiv c v d m, Monoid w) => MonadEquiv c v d (WriterT w m) where
-    equivalent x y = lift $ equivalent x y
-    classDesc = lift . classDesc
-    equateAll x = lift $ equateAll x
-    equate x y = lift $ equate x y
-    removeClass x = lift $ removeClass x
-    getClass x = lift $ getClass x
-    combineAll x = lift $ combineAll x
-    combine x y = lift $ combine x y
-    x === y = lift $ (===) x y
-    desc x = lift $ desc x
-    remove x = lift $ remove x
-
-instance (MonadEquiv c v d m, Error e) => MonadEquiv c v d (ErrorT e m) where
     equivalent x y = lift $ equivalent x y
     classDesc = lift . classDesc
     equateAll x = lift $ equateAll x

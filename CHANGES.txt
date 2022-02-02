@@ -1,3 +1,7 @@
+0.4
+---
+* remove ErrorT instance for compatibility with transformers-0.6 and mtl-2.3
+
 0.3.5
 -----
 * compatibility with GHC 8.8
