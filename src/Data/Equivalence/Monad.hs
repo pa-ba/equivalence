@@ -1,10 +1,12 @@
-{-# LANGUAGE
-  RankNTypes,
-  FlexibleInstances,
-  FlexibleContexts,
-  MultiParamTypeClasses,
-  UndecidableInstances,
-  FunctionalDependencies #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-} -- for type equality ~
+{-# LANGUAGE UndecidableInstances #-}
 
 --------------------------------------------------------------------------------
 -- |
@@ -58,7 +60,7 @@ descriptors of type @c@ and contains an internal monadic computation
 of type @m a@. -}
 
 newtype EquivT s c v m a = EquivT {unEquivT :: ReaderT (Equiv s c v) (STT s m) a}
-
+  deriving (Functor, Applicative, Monad, MonadError e, MonadState st, MonadWriter w)
 
 {-| This monad transformer is a special case of 'EquivT' that only
 maintains trivial equivalence class descriptors of type @()@. -}
@@ -73,22 +75,12 @@ over elements of type @v@ with equivalence class descriptors of type
 
 type EquivM s c v = EquivT s c v Identity
 
-
 {-| This monad is a special case of 'EquivM' that only maintains
 trivial equivalence class descriptors of type @()@. -}
 
 type EquivM' s v = EquivM s () v
 
-instance Functor m => Functor (EquivT s c v m) where
-  fmap f (EquivT m) = EquivT $ fmap f m
-
-instance (Applicative m, Monad m) => Applicative (EquivT s c v m) where
-  pure = EquivT . pure
-  (EquivT f) <*> (EquivT a) = EquivT (f <*> a)
-
-instance (Monad m) => Monad (EquivT s c v m) where
-    EquivT m >>= f = EquivT (m >>= (unEquivT . f))
-    return = pure
+-- Instances for EquivT:
 
 instance MonadTrans (EquivT s c v) where
     lift = EquivT . lift . lift
@@ -96,22 +88,11 @@ instance MonadTrans (EquivT s c v) where
 instance Monad m => Fail.MonadFail (EquivT s c v m) where
     fail = error
 
+-- NB: This instance is beyond GeneralizedNewtypeDeriving
+-- because EquivT already contains a ReaderT in its monad transformer stack.
 instance (MonadReader r m) => MonadReader r (EquivT s c v m) where
     ask = EquivT $ lift ask
     local f (EquivT (ReaderT m)) = EquivT $ ReaderT $ (\ r -> local f (m r))
-
-instance (Monoid w, MonadWriter w m) => MonadWriter w (EquivT s c v m) where
-    tell w = EquivT $ tell w
-    listen (EquivT m) = EquivT $ listen m
-    pass (EquivT m) = EquivT $ pass m
-
-instance (MonadState st m) => MonadState st (EquivT s c v m) where
-    get = EquivT get
-    put s = EquivT $ put s
-
-instance (MonadError e m) => MonadError e (EquivT s c v m) where
-    throwError e = lift $ throwError e
-    catchError (EquivT m) f = EquivT $ catchError m (unEquivT . f)
 
 {-| This function runs a monadic computation that maintains an
 equivalence relation. The first two arguments specify how to construct
@@ -156,10 +137,12 @@ runEquivM' = runEquivM (const ()) (\_ _ -> ())
 maintains an equivalence relation.  -}
 
 class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m -> d where
+
     {-| This function decides whether the two given elements are
         equivalent in the current equivalence relation -}
 
     equivalent :: v -> v -> m Bool
+
     {-| This function obtains the descriptor of the given element's
         equivalence class. -}
 
@@ -180,21 +163,19 @@ class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m 
     {-| This function removes the equivalence class of the given
       element. If there is no corresponding equivalence class, @False@ is
       returned; otherwise @True@. -}
-    removeClass :: v -> m Bool
 
+    removeClass :: v -> m Bool
 
     {-| This function provides the equivalence class the given element
       is contained in. -}
 
     getClass :: v -> m c
 
-
     {-| This function combines all equivalence classes in the given
       list. Afterwards all elements in the argument list represent the same
       equivalence class! -}
 
     combineAll :: [c] -> m ()
-
 
     {-| This function combines the two given equivalence
       classes. Afterwards both arguments represent the same equivalence
@@ -209,7 +190,6 @@ class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m 
 
     (===) :: c -> c -> m Bool
 
-
     {-| This function returns the descriptor of the given
       equivalence class. -}
 
@@ -221,7 +201,36 @@ class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m 
 
     remove :: c -> m Bool
 
+    -- Default implementations for lifting via a monad transformer.
+    -- Unfortunately, GHC does not permit us to give these also to
+    -- 'equate' and 'combine', which already have a default implementation.
 
+    default equivalent  :: (MonadEquiv c v d n, MonadTrans t, t n ~ m) => v -> v -> m Bool
+    equivalent x y       = lift $ equivalent x y
+
+    default classDesc   :: (MonadEquiv c v d n, MonadTrans t, t n ~ m) => v -> m d
+    classDesc            = lift . classDesc
+
+    default equateAll   :: (MonadEquiv c v d n, MonadTrans t, t n ~ m) => [v] -> m ()
+    equateAll            = lift . equateAll
+
+    default removeClass :: (MonadEquiv c v d n, MonadTrans t, t n ~ m) => v -> m Bool
+    removeClass          = lift . removeClass
+
+    default getClass    :: (MonadEquiv c v d n, MonadTrans t, t n ~ m) => v -> m c
+    getClass             = lift . getClass
+
+    default combineAll  :: (MonadEquiv c v d n, MonadTrans t, t n ~ m) => [c] -> m ()
+    combineAll           = lift . combineAll
+
+    default (===)       :: (MonadEquiv c v d n, MonadTrans t, t n ~ m) => c -> c -> m Bool
+    x === y              = lift $ (===) x y
+
+    default desc        :: (MonadEquiv c v d n, MonadTrans t, t n ~ m) => c -> m d
+    desc                 = lift . desc
+
+    default remove      :: (MonadEquiv c v d n, MonadTrans t, t n ~ m) => c -> m Bool
+    remove               = lift . remove
 
 
 instance (Monad m, Applicative m, Ord v) => MonadEquiv (Class s d v) v d (EquivT s d v m) where
@@ -270,54 +279,17 @@ instance (Monad m, Applicative m, Ord v) => MonadEquiv (Class s d v) v d (EquivT
       lift $ S.remove part x
 
 instance (MonadEquiv c v d m, Monoid w) => MonadEquiv c v d (WriterT w m) where
-    equivalent x y = lift $ equivalent x y
-    classDesc = lift . classDesc
-    equateAll x = lift $ equateAll x
-    equate x y = lift $ equate x y
-    removeClass x = lift $ removeClass x
-    getClass x = lift $ getClass x
-    combineAll x = lift $ combineAll x
+    equate  x y = lift $ equate x y
     combine x y = lift $ combine x y
-    x === y = lift $ (===) x y
-    desc x = lift $ desc x
-    remove x = lift $ remove x
 
 instance (MonadEquiv c v d m) => MonadEquiv c v d (ExceptT e m) where
-    equivalent x y = lift $ equivalent x y
-    classDesc = lift . classDesc
-    equateAll x = lift $ equateAll x
-    equate x y = lift $ equate x y
-    removeClass x = lift $ removeClass x
-    getClass x = lift $ getClass x
-    combineAll x = lift $ combineAll x
+    equate  x y = lift $ equate x y
     combine x y = lift $ combine x y
-    x === y = lift $ (===) x y
-    desc x = lift $ desc x
-    remove x = lift $ remove x
-
 
 instance (MonadEquiv c v d m) => MonadEquiv c v d (StateT s m) where
-    equivalent x y = lift $ equivalent x y
-    classDesc = lift . classDesc
-    equateAll x = lift $ equateAll x
-    equate x y = lift $ equate x y
-    removeClass x = lift $ removeClass x
-    getClass x = lift $ getClass x
-    combineAll x = lift $ combineAll x
+    equate  x y = lift $ equate x y
     combine x y = lift $ combine x y
-    x === y = lift $ (===) x y
-    desc x = lift $ desc x
-    remove x = lift $ remove x
 
 instance (MonadEquiv c v d m) => MonadEquiv c v d (ReaderT r m) where
-    equivalent x y = lift $ equivalent x y
-    classDesc = lift . classDesc
-    equateAll x = lift $ equateAll x
-    equate x y = lift $ equate x y
-    removeClass x = lift $ removeClass x
-    getClass x = lift $ getClass x
-    combineAll x = lift $ combineAll x
+    equate  x y = lift $ equate x y
     combine x y = lift $ combine x y
-    x === y = lift $ (===) x y
-    desc x = lift $ desc x
-    remove x = lift $ remove x
