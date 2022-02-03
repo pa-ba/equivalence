@@ -99,12 +99,13 @@ equivalence relation. The first two arguments specify how to construct
 an equivalence class descriptor for a singleton class and how to
 combine two equivalence class descriptors. -}
 
-runEquivT :: (Monad m, Applicative m)
-          => (v -> c) -- ^ used to construct an equivalence class descriptor for a singleton class
-          -> (c -> c -> c) -- ^ used to combine the equivalence class descriptor of two classes
-                           --   which are meant to be combined.
-          -> (forall s. EquivT s c v m a)
-          -> m a
+runEquivT
+  :: (Monad m, Applicative m)
+  => (v -> c)      -- ^ Used to construct an equivalence class descriptor for a singleton class.
+  -> (c -> c -> c) -- ^ Used to combine the equivalence class descriptor of two classes
+                   --   which are meant to be combined.
+  -> (forall s. EquivT s c v m a)
+  -> m a
 runEquivT mk com m = runSTT $ do
   p <- leastEquiv mk com
   (`runReaderT` p) $ unEquivT m
@@ -120,11 +121,13 @@ runEquivT' = runEquivT (const ()) (\_ _-> ())
 equivalence relation. The first tow arguments specify how to construct
 an equivalence class descriptor for a singleton class and how to
 combine two equivalence class descriptors. -}
-runEquivM :: (v -> c) -- ^ used to construct an equivalence class descriptor for a singleton class
-          -> (c -> c -> c) -- ^ used to combine the equivalence class descriptor of two classes
-                           --   which are meant to be combined.
-          -> (forall s. EquivM s c v a)
-          -> a
+
+runEquivM
+  :: (v -> c)      -- ^ Used to construct an equivalence class descriptor for a singleton class.
+  -> (c -> c -> c) -- ^ Used to combine the equivalence class descriptor of two classes
+                   --   which are meant to be combined.
+  -> (forall s. EquivM s c v a)
+  -> a
 runEquivM sing comb m = runIdentity $ runEquivT sing comb m
 
 {-| This function is a special case of 'runEquivM' that only maintains
@@ -139,7 +142,7 @@ maintains an equivalence relation.  -}
 class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m -> d where
 
     {-| This function decides whether the two given elements are
-        equivalent in the current equivalence relation -}
+        equivalent in the current equivalence relation. -}
 
     equivalent :: v -> v -> m Bool
 
@@ -166,8 +169,7 @@ class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m 
 
     removeClass :: v -> m Bool
 
-    {-| This function provides the equivalence class the given element
-      is contained in. -}
+    {-| This function provides the equivalence class of the given element. -}
 
     getClass :: v -> m c
 
@@ -196,7 +198,7 @@ class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m 
     desc :: c -> m d
 
     {-| This function removes the given equivalence class. If the
-      equivalence class does not exists anymore @False@ is returned;
+      equivalence class does not exist anymore, @False@ is returned;
       otherwise @True@. -}
 
     remove :: c -> m Bool
