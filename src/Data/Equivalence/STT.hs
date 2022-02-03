@@ -67,8 +67,9 @@ import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
 
-newtype Class s c a = Class (STRef s (Entry s c a))
+{-| Abstract representation of an equivalence class. -}
 
+newtype Class s c a = Class (STRef s (Entry s c a))
 
 {-| This type represents a reference to an entry in the tree data
 structure. An entry of type 'Entry' @s c a@ lives in the state space
@@ -101,30 +102,30 @@ lives in the state space indexed by @s@, contains equivalence class
 descriptors of type @c@ and has elements of type @a@. -}
 
 data Equiv s c a = Equiv {
-      -- | maps elements to their entry in the tree data structure
+      -- | Maps elements to their entry in the tree data structure.
       entries :: Entries s c a,
-      -- | constructs an equivalence class descriptor for a singleton class
+      -- | Constructs an equivalence class descriptor for a singleton class.
       singleDesc :: a -> c,
-      -- | combines the equivalence class descriptor of two classes
+      -- | Combines the equivalence class descriptor of two classes
       --   which are meant to be combined.
       combDesc :: c -> c -> c
       }
 
 {-| This function constructs the initial data structure for
-maintaining an equivalence relation. That is it represents, the fines
+maintaining an equivalence relation. That is, it represents the finest
 (or least) equivalence class (of the set of all elements of type
 @a@). The arguments are used to maintain equivalence class
 descriptors. -}
 
-leastEquiv :: (Monad m, Applicative m)
-           => (a -> c) -- ^ used to construct an equivalence class descriptor for a singleton class
-           -> (c -> c -> c) -- ^ used to combine the equivalence class descriptor of two classes
-                            --   which are meant to be combined.
-           -> STT s m (Equiv s c a)
+leastEquiv
+  :: (Monad m, Applicative m)
+  => (a -> c)      -- ^ Used to construct an equivalence class descriptor for a singleton class.
+  -> (c -> c -> c) -- ^ Used to combine the equivalence class descriptor of two classes
+                   --   which are meant to be combined.
+  -> STT s m (Equiv s c a)
 leastEquiv mk com = do
   es <- newSTRef Map.empty
   return Equiv {entries = es, singleDesc = mk, combDesc = com}
-
 
 
 {-| This function returns the representative entry of the argument's
@@ -367,7 +368,7 @@ removeEntry (Entry r) = modifySTRef r change
 
 
 {-| This function removes the given equivalence class. If the
-equivalence class does not exists anymore @False@ is returned;
+equivalence class does not exist anymore, @False@ is returned;
 otherwise @True@. -}
 
 remove :: (Monad m, Applicative m, Ord a) => Equiv s c a -> Class s c a -> STT s m Bool
