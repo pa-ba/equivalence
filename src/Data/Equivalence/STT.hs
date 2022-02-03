@@ -3,12 +3,12 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      : Data.Equivalence.STT
--- Copyright   : 3gERP, 2010
--- License     : All Rights Reserved
+-- Copyright   : Patrick Bahr, 2010
+-- License     : BSD-3-Clause
 --
--- Maintainer  :  Patrick Bahr
--- Stability   :  unknown
--- Portability :  unknown
+-- Maintainer  :  Patrick Bahr, Andreas Abel
+-- Stability   :  stable
+-- Portability :  non-portable (MPTC)
 --
 -- This is an implementation of Tarjan's Union-Find algorithm (Robert
 -- E. Tarjan. "Efficiency of a Good But Not Linear Set Union

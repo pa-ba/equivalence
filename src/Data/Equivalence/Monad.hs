@@ -10,11 +10,11 @@
 -- |
 -- Module      : Data.Equivalence.Monad
 -- Copyright   : Patrick Bahr, 2010
--- License     : All Rights Reserved
+-- License     : BSD-3-Clause
 --
--- Maintainer  :  Patrick Bahr
--- Stability   :  unknown
--- Portability :  unknown
+-- Maintainer  :  Patrick Bahr, Andreas Abel
+-- Stability   :  stable
+-- Portability :  non-portable (MPTC with FD)
 --
 -- This is an alternative interface to the union-find implementation
 -- in ''Data.Equivalence.STT''. It is wrapped into the monad
