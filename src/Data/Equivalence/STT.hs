@@ -3,7 +3,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      : Data.Equivalence.STT
--- Copyright   : 3gERP, 2010
+-- Copyright   : Patrick Bahr, 2010
 -- License     : BSD-3-Clause
 --
 -- Maintainer  :  Patrick Bahr, Andreas Abel
