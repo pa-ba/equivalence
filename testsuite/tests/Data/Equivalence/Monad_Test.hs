@@ -10,6 +10,7 @@ import Data.Equivalence.Monad
 import Control.Monad
 import Data.Set (Set)
 import qualified Data.Set as Set
+import System.Exit
 
 
 
@@ -157,4 +158,8 @@ prop_classes l1 l1' l2 x y = putStrLn (show el ++ ";" ++ show cl) `whenFail` (el
 
 
 return []
-main = $quickCheckAll
+
+main :: IO ()
+main = do
+  success <- $quickCheckAll
+  if success then exitSuccess else exitFailure
