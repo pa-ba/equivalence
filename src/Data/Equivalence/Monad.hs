@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-} -- for type equality ~
+{-# LANGUAGE TypeOperators #-} -- for type equality ~ with GHC 9.4
 {-# LANGUAGE UndecidableInstances #-}
 
 --------------------------------------------------------------------------------
@@ -92,7 +93,7 @@ instance Monad m => Fail.MonadFail (EquivT s c v m) where
 -- because EquivT already contains a ReaderT in its monad transformer stack.
 instance (MonadReader r m) => MonadReader r (EquivT s c v m) where
     ask = EquivT $ lift ask
-    local f (EquivT (ReaderT m)) = EquivT $ ReaderT $ (\ r -> local f (m r))
+    local f (EquivT (ReaderT m)) = EquivT $ ReaderT $ \ r -> local f (m r)
 
 {-| This function runs a monadic computation that maintains an
 equivalence relation. The first two arguments specify how to construct

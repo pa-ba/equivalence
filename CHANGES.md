@@ -1,9 +1,22 @@
+0.4.0.1
+-------
+
+_Andreas Abel, 2022-05-26_
+
+* add `LANGUAGE TypeOperators` for GHC 9.4
+
 0.4
 ---
+
+_Andreas Abel, 2022-02-03_
+
 * remove ErrorT instance for compatibility with transformers-0.6 and mtl-2.3
 
 0.3.5
 -----
+
+_Patrick Bahr, 2019-09-09_
+
 * compatibility with GHC 8.8
 
 0.3.4
