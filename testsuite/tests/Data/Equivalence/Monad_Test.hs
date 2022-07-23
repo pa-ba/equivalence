@@ -10,6 +10,7 @@ import Data.Equivalence.Monad
 import Control.Monad
 import Data.Set (Set)
 import qualified Data.Set as Set
+import System.Exit
 
 
 
@@ -108,7 +109,7 @@ prop_remove x l' = runInt $ do
   cx <- getClass x
   remove cx
   allM check l
-      where check e = liftM (== Set.singleton e) $ getClass e >>= desc 
+      where check e = liftM (== Set.singleton e) $ getClass e >>= desc
 
 prop_removeClass' x y l1' l2' = runInt $ do
   let l1 = x:l1'
@@ -157,5 +158,8 @@ prop_classes l1 l1' l2 x y = putStrLn (show el ++ ";" ++ show cl) `whenFail` (el
 
 
 return []
-main = $quickCheckAll
 
+main :: IO ()
+main = do
+  success <- $quickCheckAll
+  if success then exitSuccess else exitFailure

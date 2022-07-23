@@ -10,3 +10,4 @@ dummy.cabal
 hpcreport
 *.tix
 *.log
+/dist-newstyle/
