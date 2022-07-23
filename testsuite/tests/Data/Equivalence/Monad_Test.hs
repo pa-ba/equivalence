@@ -1,9 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes, TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.Equivalence.Monad_Test where
 
-import Test.QuickCheck hiding ((===))
+import Test.QuickCheck hiding ((===), classes)
 
 import Data.Equivalence.Monad
 
@@ -134,7 +135,7 @@ prop_remove' x y l1' l2' = runInt $ do
   return (Set.fromList l2 == d)
 
 
-prop_classes l1 l1' l2 x y = putStrLn (show el ++ ";" ++ show cl) `whenFail` (el == cl)
+prop_getClasses l1 l1' l2 x y = putStrLn (show el ++ ";" ++ show cl) `whenFail` (el == cl)
     where l3 = concat (l2 : l1)
           el = runInt $ do
                  mapM equateAll l1
@@ -156,6 +157,10 @@ prop_classes l1 l1' l2 x y = putStrLn (show el ++ ";" ++ show cl) `whenFail` (el
                  eq <- cx === cy
                  return (res,eq)
 
+prop_values l = runInt $ do
+  mapM (\x -> equate x x) l
+  vs <- values
+  return (Set.fromList vs == Set.fromList l)
 
 return []
 
