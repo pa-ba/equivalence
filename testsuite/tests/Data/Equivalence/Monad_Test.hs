@@ -162,6 +162,24 @@ prop_values l = runInt $ do
   vs <- values
   return (Set.fromList vs == Set.fromList l)
 
+prop_classes = runInt $ do
+    mapM equateAll ([[0], [1]] :: [[Int]])
+    classes1 <- uniqClass =<< mapM getClass =<< values
+    classes2 <- classes
+    sameClasses classes1 classes2
+  where
+    uniqClass (c:cs) = do matches <- mapM (c ===) cs
+                          let nonMatching = map snd $ filter (not . fst) (zip matches cs)
+                          rest <- uniqClass nonMatching
+                          return (c : rest)
+    uniqClass [] = return []
+
+    sameClasses (c:cs1') cs2 = do matches <- mapM (c ===) cs2
+                                  sameClasses cs1' $ map snd $ filter (not . fst) (zip matches cs2)
+                                   
+    sameClasses []       []  = return True
+    sameClasses _        _   = return False
+
 return []
 
 main :: IO ()
