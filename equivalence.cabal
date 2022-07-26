@@ -1,10 +1,10 @@
 Cabal-Version:   >= 1.10
 Name:            equivalence
-Version:         0.4.0.1
+Version:         0.4.1
 License:         BSD3
 License-File:    LICENSE
 Author:          Patrick Bahr
-Maintainer:      paba@itu.dk
+Maintainer:      Andreas Abel
 Homepage:        https://github.com/pa-ba/equivalence
 bug-reports:     https://github.com/pa-ba/equivalence/issues
 Synopsis:        Maintaining an equivalence relation implemented as union-find using STT.
