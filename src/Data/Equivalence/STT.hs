@@ -57,6 +57,9 @@ module Data.Equivalence.STT
   , equivalent
   , classDesc
   , removeClass
+  -- Getting all represented items
+  , values
+  , classes
   ) where
 
 import Control.Monad.ST.Trans
@@ -405,3 +408,24 @@ removeClass eq v = do
         then return False
         else removeEntry (fromMaybe entry mentry)
              >> return True
+
+{-| This function returns all values represented by
+   some equivalence class. -}
+
+values :: (Monad m, Applicative m, Ord a) => Equiv s c a -> STT s m [a]
+values Equiv {entries = mref} = Map.keys <$> readSTRef mref
+
+{-| This function returns the list of
+   all equivalence classes. -}
+
+classes :: (Monad m, Applicative m, Ord a) => Equiv s c a -> STT s m [Class s c a]
+classes Equiv {entries = mref} = do
+  allEntries <- Map.elems <$> readSTRef mref
+  rootEntries <- filterM isRoot allEntries
+  mapM (fmap Class . newSTRef) $ rootEntries
+    where
+      isRoot e = do
+        x <- readSTRef (unentry e)
+        case x of
+          Node {} -> return False
+          Root {} -> return True

@@ -1,9 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes, TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.Equivalence.Monad_Test where
 
-import Test.QuickCheck hiding ((===))
+import Test.QuickCheck hiding ((===), classes)
 
 import Data.Equivalence.Monad
 
@@ -134,7 +135,7 @@ prop_remove' x y l1' l2' = runInt $ do
   return (Set.fromList l2 == d)
 
 
-prop_classes l1 l1' l2 x y = putStrLn (show el ++ ";" ++ show cl) `whenFail` (el == cl)
+prop_getClasses l1 l1' l2 x y = putStrLn (show el ++ ";" ++ show cl) `whenFail` (el == cl)
     where l3 = concat (l2 : l1)
           el = runInt $ do
                  mapM equateAll l1
@@ -156,6 +157,28 @@ prop_classes l1 l1' l2 x y = putStrLn (show el ++ ";" ++ show cl) `whenFail` (el
                  eq <- cx === cy
                  return (res,eq)
 
+prop_values l = runInt $ do
+  mapM (\x -> equate x x) l
+  vs <- values
+  return (Set.fromList vs == Set.fromList l)
+
+prop_classes = runInt $ do
+    mapM equateAll ([[0], [1]] :: [[Int]])
+    classes1 <- uniqClass =<< mapM getClass =<< values
+    classes2 <- classes
+    sameClasses classes1 classes2
+  where
+    uniqClass (c:cs) = do matches <- mapM (c ===) cs
+                          let nonMatching = map snd $ filter (not . fst) (zip matches cs)
+                          rest <- uniqClass nonMatching
+                          return (c : rest)
+    uniqClass [] = return []
+
+    sameClasses (c:cs1') cs2 = do matches <- mapM (c ===) cs2
+                                  sameClasses cs1' $ map snd $ filter (not . fst) (zip matches cs2)
+                                   
+    sameClasses []       []  = return True
+    sameClasses _        _   = return False
 
 return []
 

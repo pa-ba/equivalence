@@ -39,7 +39,8 @@ module Data.Equivalence.Monad
      ) where
 
 import Data.Equivalence.STT hiding (equate, equateAll, equivalent, classDesc, removeClass,
-                                    getClass , combine, combineAll, same , desc , remove )
+                                    getClass , combine, combineAll, same , desc , remove,
+                                    values , classes )
 import qualified Data.Equivalence.STT  as S
 
 
@@ -204,6 +205,16 @@ class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m 
 
     remove :: c -> m Bool
 
+    {-| This function returns all values represented by
+       some equivalence class. -}
+
+    values :: m [v]
+
+    {-| This function returns the list of
+       all equivalence classes. -}
+
+    classes :: m [c]
+
     -- Default implementations for lifting via a monad transformer.
     -- Unfortunately, GHC does not permit us to give these also to
     -- 'equate' and 'combine', which already have a default implementation.
@@ -281,18 +292,35 @@ instance (Monad m, Applicative m, Ord v) => MonadEquiv (Class s d v) v d (EquivT
       part <- ask
       lift $ S.remove part x
 
+    values = EquivT $ do
+      part <- ask
+      lift $ S.values part
+
+    classes = EquivT $ do
+      part <- ask
+      lift $ S.classes part
+
 instance (MonadEquiv c v d m, Monoid w) => MonadEquiv c v d (WriterT w m) where
-    equate  x y = lift $ equate x y
+    equate x y = lift $ equate x y
     combine x y = lift $ combine x y
+    values = lift values
+    classes = lift classes
 
 instance (MonadEquiv c v d m) => MonadEquiv c v d (ExceptT e m) where
     equate  x y = lift $ equate x y
     combine x y = lift $ combine x y
+    values = lift values
+    classes = lift classes
+
 
 instance (MonadEquiv c v d m) => MonadEquiv c v d (StateT s m) where
     equate  x y = lift $ equate x y
     combine x y = lift $ combine x y
+    values = lift values
+    classes = lift classes
 
 instance (MonadEquiv c v d m) => MonadEquiv c v d (ReaderT r m) where
     equate  x y = lift $ equate x y
     combine x y = lift $ combine x y
+    values = lift values
+    classes = lift classes
