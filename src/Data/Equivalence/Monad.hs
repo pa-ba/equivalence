@@ -206,12 +206,16 @@ class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m 
     remove :: c -> m Bool
 
     {-| This function returns all values represented by
-       some equivalence class. -}
+       some equivalence class.
+
+       @since 0.4.1 -}
 
     values :: m [v]
 
     {-| This function returns the list of
-       all equivalence classes. -}
+       all equivalence classes.
+
+       @since 0.4.1 -}
 
     classes :: m [c]
 
@@ -245,6 +249,12 @@ class (Monad m, Applicative m, Ord v) => MonadEquiv c v d m | m -> v, m -> c, m 
 
     default remove      :: (MonadEquiv c v d n, MonadTrans t, t n ~ m) => c -> m Bool
     remove               = lift . remove
+
+    default values      :: (MonadEquiv c v d n, MonadTrans t, t n ~ m) => m [v]
+    values               = lift values
+
+    default classes     :: (MonadEquiv c v d n, MonadTrans t, t n ~ m) => m [c]
+    classes              = lift classes
 
 
 instance (Monad m, Applicative m, Ord v) => MonadEquiv (Class s d v) v d (EquivT s d v m) where
@@ -301,26 +311,18 @@ instance (Monad m, Applicative m, Ord v) => MonadEquiv (Class s d v) v d (EquivT
       lift $ S.classes part
 
 instance (MonadEquiv c v d m, Monoid w) => MonadEquiv c v d (WriterT w m) where
-    equate x y = lift $ equate x y
+    equate  x y = lift $ equate x y
     combine x y = lift $ combine x y
-    values = lift values
-    classes = lift classes
 
 instance (MonadEquiv c v d m) => MonadEquiv c v d (ExceptT e m) where
     equate  x y = lift $ equate x y
     combine x y = lift $ combine x y
-    values = lift values
-    classes = lift classes
 
 
 instance (MonadEquiv c v d m) => MonadEquiv c v d (StateT s m) where
     equate  x y = lift $ equate x y
     combine x y = lift $ combine x y
-    values = lift values
-    classes = lift classes
 
 instance (MonadEquiv c v d m) => MonadEquiv c v d (ReaderT r m) where
     equate  x y = lift $ equate x y
     combine x y = lift $ combine x y
-    values = lift values
-    classes = lift classes
