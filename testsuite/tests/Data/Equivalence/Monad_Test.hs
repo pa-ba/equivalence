@@ -9,16 +9,14 @@ import Test.QuickCheck hiding ((===), classes)
 import Data.Equivalence.Monad
 
 import Control.Monad
+import Data.Function (on)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import System.Exit
 
-
-
 --------------------------------------------------------------------------------
 -- Test Suits
 --------------------------------------------------------------------------------
-
 
 -- run :: (Ord a) => STT s Identity (Equiv s (Set a) a)
 run :: (Ord v) => (forall s. EquivM s (Set v) v a) -> a
@@ -30,6 +28,12 @@ runInt = run
 allM f l = liftM and $ mapM f l
 
 getClasses l1 = mapM getClass l1
+
+infixr 9 <.>
+
+-- | Composition: pure function after functorial (monadic) function.
+(<.>) :: Functor m => (b -> c) -> (a -> m b) -> a -> m c
+(f <.> g) a = f <$> g a
 
 
 --------------------------------------------------------------------------------
@@ -44,7 +48,7 @@ prop_equateAll l' v = runInt $ do
   let l = v:l'
   equateAll l
   d <- classDesc v
-  return  (d == Set.fromList l)
+  return (d == Set.fromList l)
 
 prop_combineAll l' v = runInt $ do
   let l = v:l'
@@ -135,50 +139,49 @@ prop_remove' x y l1' l2' = runInt $ do
   return (Set.fromList l2 == d)
 
 
-prop_getClasses l1 l1' l2 x y = putStrLn (show el ++ ";" ++ show cl) `whenFail` (el == cl)
-    where l3 = concat (l2 : l1)
-          el = runInt $ do
-                 mapM equateAll l1
-                 mapM removeClass l2
-                 mapM equateAll (l1' :: [[Int]])
-                 res <- mapM classDesc l3
-                 eq <- equivalent x y
-                 return (res,eq)
-          cl = runInt $ do
-                 cls1 <- mapM getClasses l1
-                 mapM combineAll cls1
-                 cls2 <- getClasses l2
-                 mapM remove cls2
-                 cls1' <- mapM getClasses l1'
-                 mapM combineAll cls1'
-                 cls3 <- getClasses l3
-                 res <- mapM desc cls3
-                 [cx,cy] <- getClasses [x,y]
-                 eq <- cx === cy
-                 return (res,eq)
+prop_getClasses l1 l1' l2 x y =
+  putStrLn (show el ++ ";" ++ show cl) `whenFail` (el == cl)
+  where
+    l3 = concat (l2 : l1)
+
+    el = runInt $ do
+      mapM equateAll l1
+      mapM removeClass l2
+      mapM equateAll (l1' :: [[Int]])
+      res <- mapM classDesc l3
+      eq <- equivalent x y
+      return (res,eq)
+
+    cl = runInt $ do
+      cls1 <- mapM getClasses l1
+      mapM combineAll cls1
+      cls2 <- getClasses l2
+      mapM remove cls2
+      cls1' <- mapM getClasses l1'
+      mapM combineAll cls1'
+      cls3 <- getClasses l3
+      res <- mapM desc cls3
+      [cx,cy] <- getClasses [x,y]
+      eq <- cx === cy
+      return (res,eq)
 
 prop_values l = runInt $ do
-  mapM (\x -> equate x x) l
-  vs <- values
-  return (Set.fromList vs == Set.fromList l)
-
-prop_classes = runInt $ do
-    mapM equateAll ([[0], [1]] :: [[Int]])
-    classes1 <- uniqClass =<< mapM getClass =<< values
-    classes2 <- classes
-    sameClasses classes1 classes2
+    mapM (\x -> equate x x) l
+    sameSet l <$> values
   where
-    uniqClass (c:cs) = do matches <- mapM (c ===) cs
-                          let nonMatching = map snd $ filter (not . fst) (zip matches cs)
-                          rest <- uniqClass nonMatching
-                          return (c : rest)
-    uniqClass [] = return []
+    sameSet = (==) `on` Set.fromList
 
-    sameClasses (c:cs1') cs2 = do matches <- mapM (c ===) cs2
-                                  sameClasses cs1' $ map snd $ filter (not . fst) (zip matches cs2)
-                                   
-    sameClasses []       []  = return True
-    sameClasses _        _   = return False
+prop_classes l = runInt $ do
+    mapM equateAll (l :: [[Int]])
+    classes1 <- uniqClass =<< mapM getClass =<< values
+    sameClasses classes1 =<< classes
+  where
+    uniqClass []     = return []
+    uniqClass (c:cs) = (c :) <$> do
+      uniqClass =<< filterM (not <.> (c ===)) cs
+
+    sameClasses []       cs2 = return $ null cs2
+    sameClasses (c:cs1') cs2 = sameClasses cs1' =<< filterM (not <.> (c ===)) cs2
 
 return []
 
