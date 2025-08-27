@@ -1,6 +1,6 @@
-Cabal-Version:   >= 1.10
+Cabal-Version:   1.18
 Name:            equivalence
-Version:         0.4.1
+Version:         0.4.1.1
 License:         BSD3
 License-File:    LICENSE
 Author:          Patrick Bahr
@@ -21,6 +21,7 @@ Stability:       provisional
 Build-Type:      Simple
 
 tested-with:
+  GHC == 9.14.1
   GHC == 9.12.2
   GHC == 9.10.2
   GHC == 9.8.4
@@ -35,7 +36,7 @@ tested-with:
   GHC == 8.2.2
   GHC == 8.0.2
 
-Extra-Source-Files: CHANGES.md
+Extra-Doc-Files: CHANGES.md
 
 source-repository head
   type:     git
@@ -50,16 +51,16 @@ Library
   default-language:     Haskell2010
   Build-Depends:
     base                   >= 4.9    && < 5
-    , containers
+    -- Lower bounds at least from Stackage LTS 7.0 (GHC 8.0)
+    , containers           >= 0.5.7.1
     , mtl                  >= 2.2.1
     , STMonadTrans         >= 0.4.3
-    , transformers         >= 0.2
-    , transformers-compat  >= 0.3
+    , transformers         >= 0.5.2.0
 
   ghc-options:
       -Wall
-      -fno-warn-name-shadowing
-      -fno-warn-incomplete-record-updates
+      -Wno-name-shadowing
+      -Wno-incomplete-record-updates
       -Wcompat
 
 Test-Suite test
@@ -79,15 +80,14 @@ Test-Suite test
     , mtl
     , STMonadTrans
     , transformers
-    , transformers-compat
     -- Additional dependencies for testsuite
-    , QuickCheck           >= 2
-    , template-haskell
+    -- Lower bounds at least from Stackage LTS 7.0 (GHC 8.0)
+    , QuickCheck           >= 2.8.2
 
   ghc-options:
       -Wall
-      -fno-warn-name-shadowing
-      -fno-warn-incomplete-record-updates
-      -fno-warn-missing-signatures
-      -fno-warn-unused-do-bind
+      -Wno-name-shadowing
+      -Wno-incomplete-record-updates
+      -Wno-missing-signatures
+      -Wno-unused-do-bind
       -Wcompat

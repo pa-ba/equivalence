@@ -86,11 +86,12 @@ structure. Entry data of type 'EntryData' @s c a@ lives in the state space
 indexed by @s@, contains equivalence class descriptors of type @c@ and
 has elements of type @a@.  -}
 
-data EntryData s c a = Node {
+data EntryData s c a
+  = Node {
       entryParent :: Entry s c a,
       entryValue :: a
     }
-                     | Root {
+  | Root {
       entryDesc :: c,
       entryWeight :: Int,
       entryValue :: a,
@@ -236,13 +237,8 @@ equivalence relation representation or @Nothing@ if there is none,
 yet.  -}
 
 getEntry :: (Monad m, Applicative m, Ord a) => Equiv s c a -> a -> STT s m (Maybe (Entry s c a))
-getEntry Equiv { entries = mref} val = do
-  m <- readSTRef mref
-  case Map.lookup val m of
-    Nothing -> return Nothing
-    Just entry -> return $ Just entry
-
-
+getEntry Equiv{ entries = mref } val = do
+  Map.lookup val <$> readSTRef mref
 
 {-| This function equates the two given (representative) elements. That
 is, it unions the equivalence classes of the two elements and combines

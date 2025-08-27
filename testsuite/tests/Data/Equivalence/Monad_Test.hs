@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes, TemplateHaskell #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Data.Equivalence.Monad_Test where
 

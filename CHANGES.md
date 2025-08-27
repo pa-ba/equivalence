@@ -1,3 +1,13 @@
+0.4.1.1
+-------
+
+_Andreas Abel, 2025-08-27_
+
+- bump cabal-version to 1.18
+- remove unused dependencies
+
+Tested with GHC 8.0 - 9.14 alpha1
+
 0.4.1
 -----
 
