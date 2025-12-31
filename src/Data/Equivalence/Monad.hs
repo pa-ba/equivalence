@@ -55,13 +55,13 @@ import qualified Control.Monad.Fail as Fail
 
 
 {-| This monad transformer encapsulates computations maintaining an
-equivalence relation. A monadic computation of type 'EquivT' @s c v m
+equivalence relation. A monadic computation of type 'EquivT' @s d v m
 a@ maintains a state space indexed by type @s@, maintains an
 equivalence relation over elements of type @v@ with equivalence class
-descriptors of type @c@ and contains an internal monadic computation
+descriptors of type @d@ and contains an internal monadic computation
 of type @m a@. -}
 
-newtype EquivT s c v m a = EquivT {unEquivT :: ReaderT (Equiv s c v) (STT s m) a}
+newtype EquivT s d v m a = EquivT {unEquivT :: ReaderT (Equiv s d v) (STT s m) a}
   deriving (Functor, Applicative, Monad, MonadError e, MonadState st, MonadWriter w)
 
 {-| This monad transformer is a special case of 'EquivT' that only
@@ -70,12 +70,12 @@ maintains trivial equivalence class descriptors of type @()@. -}
 type EquivT' s = EquivT s ()
 
 {-| This monad encapsulates computations maintaining an equivalence
-relation. A monadic computation of type 'EquivM' @s c v a@ maintains a
+relation. A monadic computation of type 'EquivM' @s d v a@ maintains a
 state space indexed by type @s@, maintains an equivalence relation
 over elements of type @v@ with equivalence class descriptors of type
-@c@ and returns a value of type @a@.  -}
+@d@ and returns a value of type @a@.  -}
 
-type EquivM s c v = EquivT s c v Identity
+type EquivM s d v = EquivT s d v Identity
 
 {-| This monad is a special case of 'EquivM' that only maintains
 trivial equivalence class descriptors of type @()@. -}
@@ -84,15 +84,15 @@ type EquivM' s v = EquivM s () v
 
 -- Instances for EquivT:
 
-instance MonadTrans (EquivT s c v) where
+instance MonadTrans (EquivT s d v) where
     lift = EquivT . lift . lift
 
-instance Monad m => Fail.MonadFail (EquivT s c v m) where
+instance Monad m => Fail.MonadFail (EquivT s d v m) where
     fail = error
 
 -- NB: This instance is beyond GeneralizedNewtypeDeriving
 -- because EquivT already contains a ReaderT in its monad transformer stack.
-instance (MonadReader r m) => MonadReader r (EquivT s c v m) where
+instance (MonadReader r m) => MonadReader r (EquivT s d v m) where
     ask = EquivT $ lift ask
     local f (EquivT (ReaderT m)) = EquivT $ ReaderT $ \ r -> local f (m r)
 
@@ -103,10 +103,10 @@ combine two equivalence class descriptors. -}
 
 runEquivT
   :: (Monad m, Applicative m)
-  => (v -> c)      -- ^ Used to construct an equivalence class descriptor for a singleton class.
-  -> (c -> c -> c) -- ^ Used to combine the equivalence class descriptor of two classes
+  => (v -> d)      -- ^ Used to construct an equivalence class descriptor for a singleton class.
+  -> (d -> d -> d) -- ^ Used to combine the equivalence class descriptor of two classes
                    --   which are meant to be combined.
-  -> (forall s. EquivT s c v m a)
+  -> (forall s. EquivT s d v m a)
   -> m a
 runEquivT mk com m = runSTT $ do
   p <- leastEquiv mk com
@@ -125,10 +125,10 @@ an equivalence class descriptor for a singleton class and how to
 combine two equivalence class descriptors. -}
 
 runEquivM
-  :: (v -> c)      -- ^ Used to construct an equivalence class descriptor for a singleton class.
-  -> (c -> c -> c) -- ^ Used to combine the equivalence class descriptor of two classes
+  :: (v -> d)      -- ^ Used to construct an equivalence class descriptor for a singleton class.
+  -> (d -> d -> d) -- ^ Used to combine the equivalence class descriptor of two classes
                    --   which are meant to be combined.
-  -> (forall s. EquivM s c v a)
+  -> (forall s. EquivM s d v a)
   -> a
 runEquivM sing comb m = runIdentity $ runEquivT sing comb m
 
