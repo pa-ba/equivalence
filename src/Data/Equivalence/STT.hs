@@ -72,44 +72,44 @@ import qualified Data.Map as Map
 
 {-| Abstract representation of an equivalence class. -}
 
-newtype Class s d a = Class (STRef s (Entry s d a))
+newtype Class s d v = Class (STRef s (Entry s d v))
 
 {-| This type represents a reference to an entry in the tree data
-structure. An entry of type 'Entry' @s d a@ lives in the state space
+structure. An entry of type 'Entry' @s d v@ lives in the state space
 indexed by @s@, contains equivalence class descriptors of type @d@ and
-has elements of type @a@.-}
+has elements of type @v@.-}
 
-newtype Entry s d a = Entry {unentry :: STRef s (EntryData s d a)}
+newtype Entry s d v = Entry {unentry :: STRef s (EntryData s d v)}
 
 {-| This type represents entries (nodes) in the tree data
-structure. Entry data of type 'EntryData' @s d a@ lives in the state space
+structure. Entry data of type 'EntryData' @s d v@ lives in the state space
 indexed by @s@, contains equivalence class descriptors of type @d@ and
-has elements of type @a@.  -}
+has elements of type @v@.  -}
 
-data EntryData s d a
+data EntryData s d v
   = Node {
-      entryParent :: Entry s d a,
-      entryValue :: a
+      entryParent :: Entry s d v,
+      entryValue :: v
     }
   | Root {
       entryDesc :: d,
       entryWeight :: Int,
-      entryValue :: a,
+      entryValue :: v,
       entryDeleted :: Bool
     }
 
-type Entries s d a = STRef s (Map a (Entry s d a))
+type Entries s d v = STRef s (Map v (Entry s d v))
 
 {-| This is the top-level data structure that represents an
-equivalence relation. An equivalence relation of type 'Equiv' @s d a@
+equivalence relation. An equivalence relation of type 'Equiv' @s d v@
 lives in the state space indexed by @s@, contains equivalence class
-descriptors of type @d@ and has elements of type @a@. -}
+descriptors of type @d@ and has elements of type @v@. -}
 
-data Equiv s d a = Equiv {
+data Equiv s d v = Equiv {
       -- | Maps elements to their entry in the tree data structure.
-      entries :: Entries s d a,
+      entries :: Entries s d v,
       -- | Constructs an equivalence class descriptor for a singleton class.
-      singleDesc :: a -> d,
+      singleDesc :: v -> d,
       -- | Combines the equivalence class descriptor of two classes
       --   which are meant to be combined.
       combDesc :: d -> d -> d
@@ -118,15 +118,15 @@ data Equiv s d a = Equiv {
 {-| This function constructs the initial data structure for
 maintaining an equivalence relation. That is, it represents the finest
 (or least) equivalence class (of the set of all elements of type
-@a@). The arguments are used to maintain equivalence class
+@v@). The arguments are used to maintain equivalence class
 descriptors. -}
 
 leastEquiv
   :: (Monad m, Applicative m)
-  => (a -> d)      -- ^ Used to construct an equivalence class descriptor for a singleton class.
+  => (v -> d)      -- ^ Used to construct an equivalence class descriptor for a singleton class.
   -> (d -> d -> d) -- ^ Used to combine the equivalence class descriptor of two classes
                    --   which are meant to be combined.
-  -> STT s m (Equiv s d a)
+  -> STT s m (Equiv s d v)
 leastEquiv mk com = do
   es <- newSTRef Map.empty
   return Equiv {entries = es, singleDesc = mk, combDesc = com}
@@ -138,7 +138,7 @@ the representative itself.
 
 This function performs path compression.  -}
 
-representative' :: (Monad m, Applicative m) => Entry s d a -> STT s m (Maybe (Entry s d a),Bool)
+representative' :: (Monad m, Applicative m) => Entry s d v -> STT s m (Maybe (Entry s d v),Bool)
 representative' (Entry e) = do
   ed <- readSTRef e
   case ed of
@@ -156,7 +156,7 @@ equivalence class (i.e. the root of its tree).
 
 This function performs path compression.  -}
 
-representative :: (Monad m, Applicative m, Ord a) => Equiv s d a -> a -> STT s m (Entry s d a)
+representative :: (Monad m, Applicative m, Ord v) => Equiv s d v -> v -> STT s m (Entry s d v)
 representative eq v = do
   mentry <- getEntry eq v
   case mentry of -- check whether there is an entry
@@ -172,7 +172,7 @@ representative eq v = do
 {-| This function provides the representative entry of the given
 equivalence class. This function performs path compression. -}
 
-classRep :: (Monad m, Applicative m, Ord a) => Equiv s d a -> Class s d a -> STT s m (Entry s d a)
+classRep :: (Monad m, Applicative m, Ord v) => Equiv s d v -> Class s d v -> STT s m (Entry s d v)
 classRep eq (Class p) = do
   entry <- readSTRef p
   (mrepr,del) <- representative' entry
@@ -192,18 +192,18 @@ classRep eq (Class p) = do
 entry's value, inserts it into the lookup table (thereby removing any
 existing entry). -}
 
-mkEntry' :: (Monad m, Applicative m, Ord a)
-        => Equiv s d a -> Entry s d a
-        -> STT s m (Entry s d a)  -- ^ the constructed entry
+mkEntry' :: (Monad m, Applicative m, Ord v)
+        => Equiv s d v -> Entry s d v
+        -> STT s m (Entry s d v)  -- ^ the constructed entry
 mkEntry' eq (Entry e) = readSTRef e >>= mkEntry eq . entryValue
 
 {-| This function constructs a new (root) entry containing the given
 value, inserts it into the lookup table (thereby removing any existing
 entry). -}
 
-mkEntry :: (Monad m, Applicative m, Ord a)
-        => Equiv s d a -> a
-        -> STT s m (Entry s d a)  -- ^ the constructed entry
+mkEntry :: (Monad m, Applicative m, Ord v)
+        => Equiv s d v -> v
+        -> STT s m (Entry s d v)  -- ^ the constructed entry
 mkEntry Equiv {entries = mref, singleDesc = mkDesc} val = do
   e <- newSTRef Root
        { entryDesc = mkDesc val,
@@ -219,13 +219,13 @@ mkEntry Equiv {entries = mref, singleDesc = mkDesc} val = do
 {-| This function provides the equivalence class the given element is
 contained in. -}
 
-getClass :: (Monad m, Applicative m, Ord a) => Equiv s d a -> a -> STT s m (Class s d a)
+getClass :: (Monad m, Applicative m, Ord v) => Equiv s d v -> v -> STT s m (Class s d v)
 getClass eq v = do
   en <- (getEntry' eq v)
   liftM Class $ newSTRef en
 
 
-getEntry' :: (Monad m, Applicative m, Ord a) => Equiv s d a -> a -> STT s m (Entry s d a)
+getEntry' :: (Monad m, Applicative m, Ord v) => Equiv s d v -> v -> STT s m (Entry s d v)
 getEntry' eq v = do
   mentry <- getEntry eq v
   case mentry of
@@ -236,7 +236,7 @@ getEntry' eq v = do
 equivalence relation representation or @Nothing@ if there is none,
 yet.  -}
 
-getEntry :: (Monad m, Applicative m, Ord a) => Equiv s d a -> a -> STT s m (Maybe (Entry s d a))
+getEntry :: (Monad m, Applicative m, Ord v) => Equiv s d v -> v -> STT s m (Maybe (Entry s d v))
 getEntry Equiv{ entries = mref } val = do
   Map.lookup val <$> readSTRef mref
 
@@ -245,7 +245,7 @@ is, it unions the equivalence classes of the two elements and combines
 their descriptor. The returned entry is the representative of the new
 equivalence class -}
 
-equateEntry :: (Monad m, Applicative m, Ord a) => Equiv s d a -> Entry s d a -> Entry s d a -> STT s m (Entry s d a)
+equateEntry :: (Monad m, Applicative m, Ord v) => Equiv s d v -> Entry s d v -> Entry s d v -> STT s m (Entry s d v)
 equateEntry Equiv {combDesc = mkDesc} repx@(Entry rx) repy@(Entry ry) =
   if (rx /= ry) then do
     dx <- readSTRef rx
@@ -268,8 +268,8 @@ equateEntry Equiv {combDesc = mkDesc} repx@(Entry rx) repy@(Entry ry) =
       -- 'combineEntries', which always uses representative entries
   else return  repx
 
-combineEntries :: (Monad m, Applicative m, Ord a)
-               => Equiv s d a -> [b] -> (b -> STT s m (Entry s d a)) -> STT s m ()
+combineEntries :: (Monad m, Applicative m, Ord v)
+               => Equiv s d v -> [b] -> (b -> STT s m (Entry s d v)) -> STT s m ()
 combineEntries  _ [] _ = return ()
 combineEntries eq (e:es) rep = do
   er <- rep e
@@ -285,7 +285,7 @@ combineEntries eq (e:es) rep = do
 list. Afterwards all elements in the argument list represent the same
 equivalence class! -}
 
-combineAll :: (Monad m, Applicative m, Ord a) => Equiv s d a -> [Class s d a] -> STT s m ()
+combineAll :: (Monad m, Applicative m, Ord v) => Equiv s d v -> [Class s d v] -> STT s m ()
 combineAll eq cls = combineEntries eq cls (classRep eq)
 
 
@@ -294,7 +294,7 @@ classes. Afterwards both arguments represent the same equivalence
 class! One of it is returned in order to represent the new combined
 equivalence class. -}
 
-combine :: (Monad m, Applicative m, Ord a) => Equiv s d a -> Class s d a -> Class s d a -> STT s m (Class s d a)
+combine :: (Monad m, Applicative m, Ord v) => Equiv s d v -> Class s d v -> Class s d v -> STT s m (Class s d v)
 combine eq x y = combineAll eq [x,y] >> return x
 
 
@@ -302,21 +302,21 @@ combine eq x y = combineAll eq [x,y] >> return x
 unions the equivalence classes of the elements and combines their
 descriptor. -}
 
-equateAll :: (Monad m, Applicative m, Ord a) => Equiv s d a -> [a] -> STT s m ()
+equateAll :: (Monad m, Applicative m, Ord v) => Equiv s d v -> [v] -> STT s m ()
 equateAll eq cls = combineEntries eq cls (representative eq)
 
 {-| This function equates the two given elements. That is, it unions
 the equivalence classes of the two elements and combines their
 descriptor. -}
 
-equate :: (Monad m, Applicative m, Ord a) => Equiv s d a -> a -> a -> STT s m ()
+equate :: (Monad m, Applicative m, Ord v) => Equiv s d v -> v -> v -> STT s m ()
 equate eq x y = equateAll eq [x,y]
 
 
 {-| This function returns the descriptor of the given
 equivalence class. -}
 
-desc :: (Monad m, Applicative m, Ord a) => Equiv s d a -> Class s d a -> STT s m d
+desc :: (Monad m, Applicative m, Ord v) => Equiv s d v -> Class s d v -> STT s m d
 desc eq cl = do
   Entry e <- classRep eq cl
   liftM entryDesc $ readSTRef e
@@ -324,7 +324,7 @@ desc eq cl = do
 {-| This function returns the descriptor of the given element's
 equivalence class. -}
 
-classDesc :: (Monad m, Applicative m, Ord a) => Equiv s d a -> a -> STT s m d
+classDesc :: (Monad m, Applicative m, Ord v) => Equiv s d v -> v -> STT s m d
 classDesc eq val = do
   Entry e <- representative eq val
   liftM entryDesc $ readSTRef e
@@ -333,7 +333,7 @@ classDesc eq val = do
 {-| This function decides whether the two given equivalence classes
 are the same. -}
 
-same :: (Monad m, Applicative m, Ord a) => Equiv s d a -> Class s d a -> Class s d a -> STT s m Bool
+same :: (Monad m, Applicative m, Ord v) => Equiv s d v -> Class s d v -> Class s d v -> STT s m Bool
 same eq c1 c2 = do
   (Entry r1) <- classRep eq c1
   (Entry r2) <- classRep eq c2
@@ -343,7 +343,7 @@ same eq c1 c2 = do
 same equivalence class according to the given equivalence relation
 representation. -}
 
-equivalent :: (Monad m, Applicative m, Ord a) => Equiv s d a -> a -> a -> STT s m Bool
+equivalent :: (Monad m, Applicative m, Ord v) => Equiv s d v -> v -> v -> STT s m Bool
 equivalent eq v1 v2 = do
   (Entry r1) <- representative eq v1
   (Entry r2) <- representative eq v2
